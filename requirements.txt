@@ -1,0 +1,8 @@
+python>=3.12
+numpy>=2.1
+torch>=2.5
+torchvision>=0.20
+torchaudio>=2.5
+PyYAML>=6.0
+matplotlib>=3.10
+tqdm>=4.65
