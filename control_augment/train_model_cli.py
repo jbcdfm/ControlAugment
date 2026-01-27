@@ -221,21 +221,12 @@ class Create_train_Dataset(Dataset):
 def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-28-10', val_type = "test_subset", DAtype = 'CtrlA'):
     
     if DAtype == 'CtrlA':
-    
         assert type(N_augs) == int, "N_augs must be an integer for CtrlA"
         N = int(N_augs)
         assert N > 0, "N must be positive or 0" 
         print(f"CtrlA-augmentation: {N_augs}")
     
-    elif DAtype == 'RA':
-        assert len(N_augs) == 2, "N_augs must have a length of 2 for RA"
-        N = N_augs[0]
-        magnitude = N_augs[1]
-        assert N>0, "Number of augmentations for RA must be larger than 0"
-        assert magnitude>0, "Magnitude of RA must be larger than 0"
-    
-        print(f"RA-augmentation: {N_augs}")
-    
+
     # Choose cuda GPU if available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -393,15 +384,10 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
 
 
 
-    if  DAtype == "RA":
-        DataAugTransform = transforms.RandAugment(num_ops=N,magnitude=magnitude,interpolation=interp)
-        train_transform = su.aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std)
-    elif DAtype == "TA":
+    if DAtype == "TA":
         DataAugTransform = augTA.TrivialAugment(aug_space=params["aug_space"],interpolation=interp)
         train_transform = su.aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std)
 
-
-    if DAtype == "RA" or DAtype == "TA":
         train_data.transform = train_transform   # Update training data transformations
         train_loader = DataLoader(
             train_data, 
