@@ -11,3 +11,4 @@ KAPPA_SP = 1.5
 PHASE_LENGTH = 5
 SETUP = "standard"
 VAL_SET = "test_subset"
+AUG_SPACE = "Control"
