@@ -13,7 +13,6 @@ from torchvision import transforms
 import numpy as np
 import time
 import multiprocessing
-
 from torch.utils.data import random_split
 from torch.utils.data import Subset
 from torchvision.transforms import functional as F2, InterpolationMode
@@ -224,7 +223,10 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
         N = int(N_augs)
         assert N > 0, "N must be positive or 0" 
         print(f"CtrlA-augmentation: {N_augs}")
-    
+        aug = importlib.import_module(f"src.augmentations_CtrlA_{params['aug_space']}")
+    elif DAtype == 'TA':
+        aug = importlib.import_module("src.augmentations_TA")
+
 
     # Choose cuda GPU if available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -288,22 +290,12 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
     ])
 
 
-    # Import augmentation module based on DA type and augmentation space
-    if DAtype == "CtrlA":
-        aug = importlib.import_module(f"src.augmentations_CtrlA_{params['aug_space']}")
-    elif DAtype == "TA":
-        aug = importlib.import_module("src.augmentations_TA")
-
-    transform_vec = list(aug.SingleAugment()._augmentation_space().keys())
-
-        
-    
 
            
     # Define learning parameters
     lr0 = params["lr"]
+    lr_schedule = 1/2*lr0*(1+np.cos(np.pi*np.linspace(0,epoch_max,epoch_max+1)/(epoch_max+1)))        
     wd = params["wd"]
-    lr_schedule_type = params["schedule"]
     # Loss criteria
     criterion = nn.CrossEntropyLoss()
     batch_sz = 125  
@@ -316,6 +308,9 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
     
     
     if DAtype == 'CtrlA':    
+        transform_vec = list(aug.SingleAugment()._augmentation_space().keys())
+        assert list(aug.SingleAugment()._augmentation_space().keys()) == list(aug.ControlAugment()._augmentation_space().keys()), "Augmentation keys don't match for CtrlA"
+        
         # Create ControlAugment dataset 
         aug_p_batch = 8
         CtrlA_strengths = 10   # number of gamma values applied to obtain sensitivity curves for each operation
@@ -343,28 +338,6 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
     # After the creation of the Ctrl-A dataset, convert to dataset object:
     val_data =  DynamicTransformDataset(val_data)   
     
-    
-    # Initial ASD parameters 
-    Gamma = [0.]*len(transform_vec) 
-    alpha =  [0.]*len(transform_vec)
- 
-
-    print(len(train_data))
-    print(len(val_data))
-    print(len(CtrlA_dataset))
- 
-    
- 
-    # Lists updated during training
-    train_losses = []
-    val_losses = []
-    train_correct= []
-    val_correct=[]
-    arg_strengths = []
-    alpha_strengths = []
-    kappa = []
-    phases = [0]
-
 
     val_data.transform = val_transform    # Test data transformation
     val_loader = DataLoader(
@@ -376,16 +349,6 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
         persistent_workers=True,
         )
        
-
-
-    
-    # Define schedules
-    lr_schedule = 1/2*lr0*(1+np.cos(np.pi*np.linspace(0,epoch_max,epoch_max+1)/(epoch_max+1)))        
-    print(f"Learning rate schedule is of type: {lr_schedule_type}")
-
-
-
-
 
 
     if DAtype == "TA":
@@ -402,15 +365,27 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
             num_workers=6,
             persistent_workers=True,
             )
-
-
+    
+    # Lists updated during training
+    train_losses = []
+    val_losses = []
+    train_correct= []
+    val_correct=[]
+    arg_strengths = []
+    alpha_strengths = []
+    kappa = []
+    phases = [0]
+    
+        
+    # Initial ASD parameters 
+    Gamma = [0.]*len(transform_vec) 
+    alpha =  [0.]*len(transform_vec)
     
 
     i = 1  # epoch index stepper
     j = 1  # phase index stepper
-    
+        
 
-    
     print("Initiating training...")
     train_flag = True
     while train_flag:
@@ -433,12 +408,6 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
         if i == 1:
             print("Transform pipeline:")
             print(train_transform)
-        
-
-
-
-            
-        if j == 1:
             start_time = time.time()
         
         print(f"Phase {j} | Learning rate: {lr_schedule[i-1]:.6f}")
@@ -531,17 +500,12 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
                 kappa.append(train_loss_avg/val_loss_avg)
             i+=1    
     
-
-                
-    
-    
     print(f"Training ended after phase {j}" )
     current_time = time.time()
     total = current_time - start_time
     print(f"Training took {total/60} minutes")    
     val_acc = np.asarray(val_correct)/len(val_data)*100
     print(f"Final validation accuracy of {val_acc[::-1][0]} %")
-
 
 
     if "cifar" in dataset:
@@ -556,31 +520,24 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
     # Evaluate Model
     test_acc, test_acc_TTA = TTA_test_model(test_data, model, criterion, TTA_transforms, batch_sz, number_classes, device)
     
-    
     # Freeing memory
     del model
     torch.cuda.empty_cache()
-    
     
     return test_acc, test_acc_TTA, val_acc, arg_strengths, alpha_strengths, kappa, lr_schedule
 
 
 
 
-
 def main():
     
-    parser = argparse.ArgumentParser()
-    
-    
+    parser = argparse.ArgumentParser()    
     parser.add_argument(
         "--config",
         type=str,
         default="config_cifar10_modified",
         help="Choose which config file from src.configs to use"
         )
-    
-    
     temp_args, _ = parser.parse_known_args()
     cfg = importlib.import_module(f"src.configs.{temp_args.config}")
     
@@ -598,10 +555,8 @@ def main():
     parser.add_argument("--setup", type=str, default=cfg.SETUP)
     parser.add_argument("--validation_set", type=str, default=cfg.VAL_SET)
     parser.add_argument("--aug_space", type=str, default=cfg.AUG_SPACE)
-
     
     args = parser.parse_args()
-
 
     dict_train = {"kappa": args.kappa_sp,
            "lr": args.learning_rate,
@@ -611,9 +566,6 @@ def main():
            "setup": args.setup,
            "aug_space": args.aug_space
            }
-    
-    if args.da_type == "TA":
-        dict_train.update({"aug_space": args.ta_aug_space})
 
     acc, acc_TTA, acc_val, gamma, alpha, kappa, lr = train(N_augs=args.N,
                                                            params = dict_train, 
@@ -621,8 +573,6 @@ def main():
                                                            dataset = args.dataset, 
                                                            val_type = args.validation_set, 
                                                            DAtype = args.da_type) # Run model training instance
-
-
 
 
 if __name__ == "__main__":
