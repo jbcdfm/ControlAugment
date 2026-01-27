@@ -8,3 +8,4 @@ DA_TYPE = "CtrlA"
 N_AUGS = 2
 KAPPA_SP = 1.5
 SETUP = "standard"
+VAL_SET = "test_subset"
