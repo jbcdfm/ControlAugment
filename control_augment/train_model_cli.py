@@ -218,6 +218,14 @@ class Create_train_Dataset(Dataset):
 # Main Training Loop
 def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-28-10', val_type = "test_subset", DAtype = 'CtrlA'):
     
+
+    # ASSERTIONS
+    assert params['aug_space'] in ["Standard", "Wide", "Control"], f"Invalid value: {params['aug_space']}"
+    assert dataset in ["cifar10", "cifar100", "svhn-c"], f"Invalid value: {dataset}"
+    assert val_type in ["test_subset", "train_subset"], f"Invalid value: {val_type}"
+    assert DAtype in ["CtrlA", "TA"], f"Invalid value: {DAtype}"
+    assert params["setup"] in ["standard", "modified"], f"Invalid value: {params['setup']}"
+   
     if DAtype == 'CtrlA':
         assert type(N_augs) == int, "N_augs must be an integer for CtrlA"
         N = int(N_augs)
@@ -228,11 +236,9 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
         aug = importlib.import_module("src.augmentations_TA")
 
 
+
     # Choose cuda GPU if available
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-
-
     
     print(f"Dataset: {dataset}")
     train_data, test_data, number_classes = su.load_dataset(dataset)
@@ -240,7 +246,6 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
     # Model
     model = su.setup_model(model_type,device,number_classes)
 
-        
     
     val_size = 1000
     # Create splits (with a fixed seed for repeatability)
