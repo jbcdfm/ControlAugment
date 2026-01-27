@@ -603,6 +603,7 @@ def main():
     parser.add_argument("--N_P", type=int, default=cfg.PHASE_LENGTH)
     parser.add_argument("--setup", type=str, default=cfg.SETUP)
     parser.add_argument("--validation_set", type=str, default=cfg.VAL_SET)
+    parser.add_argument("--ta_aug_space", type=str, default="Wide")
 
     
     args = parser.parse_args()
@@ -615,7 +616,9 @@ def main():
            "phase_length": args.N_P,
            "setup": args.setup,
            }
-
+    
+    if args.da_type == "TA":
+        dict_train.update({"aug_space": "Wide"})
 
     acc, acc_TTA, acc_val, gamma, alpha, kappa, lr = train(N_augs=args.N,
                                                            params = dict_train, 
