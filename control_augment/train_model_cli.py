@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Mon Jan 20 
+Created on Mon _an 20 
 
 @author: JBC
 """
@@ -13,8 +13,7 @@ from torchvision import transforms
 import numpy as np
 import time
 import multiprocessing
-from src import augmentations_TA as augTA
-from src import augmentations_CtrlA as aug
+
 from torch.utils.data import random_split
 from torch.utils.data import Subset
 from torchvision.transforms import functional as F2, InterpolationMode
@@ -267,12 +266,9 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
             train_data =  DynamicTransformDataset(train_data)
             print("Training dataset updated with mirrored versions")
             epoch_max = epoch_max//2
-                
-            
         else:
             train_data =  DynamicTransformDataset(train_data)
-            
-        
+
     else:
         train_data =  DynamicTransformDataset(train_data)
     
@@ -291,6 +287,12 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
         transforms.Normalize(data_mean, data_std),
     ])
 
+
+    # Import augmentation module based on DA type and augmentation space
+    if DAtype == "CtrlA":
+        aug = importlib.import_module(f"src.augmentations_CtrlA_{params['aug_space']}")
+    elif DAtype == "TA":
+        aug = importlib.import_module("src.augmentations_TA")
 
     transform_vec = list(aug.SingleAugment()._augmentation_space().keys())
 
@@ -384,8 +386,10 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
 
 
 
+
+
     if DAtype == "TA":
-        DataAugTransform = augTA.TrivialAugment(aug_space=params["aug_space"],interpolation=interp)
+        DataAugTransform = aug.TrivialAugment(aug_space=params["aug_space"],interpolation=interp)
         train_transform = su.aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std)
 
         train_data.transform = train_transform   # Update training data transformations
@@ -400,8 +404,12 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
             )
 
 
+    
+
     i = 1  # epoch index stepper
     j = 1  # phase index stepper
+    
+
     
     print("Initiating training...")
     train_flag = True
@@ -589,9 +597,7 @@ def main():
     parser.add_argument("--N_P", type=int, default=cfg.PHASE_LENGTH)
     parser.add_argument("--setup", type=str, default=cfg.SETUP)
     parser.add_argument("--validation_set", type=str, default=cfg.VAL_SET)
-    
-    # Extra for TA:
-    parser.add_argument("--ta_aug_space", type=str, default="Wide")
+    parser.add_argument("--aug_space", type=str, default=cfg.AUG_SPACE)
 
     
     args = parser.parse_args()
@@ -603,6 +609,7 @@ def main():
            "nmax": args.epochs,
            "phase_length": args.N_P,
            "setup": args.setup,
+           "aug_space": args.aug_space
            }
     
     if args.da_type == "TA":
