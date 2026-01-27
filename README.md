@@ -15,6 +15,5 @@ cd ControlAugment
 pip install -r requirements.txt
 
 3. Run experiment
-python train.py --config experiments/configs/cifar10.yaml
-
+python train_model_cli.py
 
