@@ -582,7 +582,7 @@ def main():
     parser.add_argument(
         "--config",
         type=str,
-        default="config_default",
+        default="config_cifar10_modified",
         help="Choose which config file from src.configs to use"
         )
     
@@ -590,7 +590,7 @@ def main():
     temp_args, _ = parser.parse_known_args()
     cfg = importlib.import_module(f"src.configs.{temp_args.config}")
     
-    
+    # Optional config changes:
     parser.add_argument("--dataset", type=str, default=cfg.DATASET)
     parser.add_argument("--epochs", type=int, default=cfg.EPOCHS)
     parser.add_argument("--batch_size", type=int, default=cfg.BATCH_SIZE)
@@ -603,6 +603,8 @@ def main():
     parser.add_argument("--N_P", type=int, default=cfg.PHASE_LENGTH)
     parser.add_argument("--setup", type=str, default=cfg.SETUP)
     parser.add_argument("--validation_set", type=str, default=cfg.VAL_SET)
+    
+    # Extra for TA:
     parser.add_argument("--ta_aug_space", type=str, default="Wide")
 
     
@@ -618,7 +620,7 @@ def main():
            }
     
     if args.da_type == "TA":
-        dict_train.update({"aug_space": "Wide"})
+        dict_train.update({"aug_space": args.ta_aug_space})
 
     acc, acc_TTA, acc_val, gamma, alpha, kappa, lr = train(N_augs=args.N,
                                                            params = dict_train, 
