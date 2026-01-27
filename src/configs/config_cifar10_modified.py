@@ -1,5 +1,5 @@
 # src/configs/config_cifar10_modified.py
-DATASET = "CIFAR10"
+DATASET = "cifar10"
 EPOCHS = 500
 BATCH_SIZE = 125
 LEARNING_RATE = 0.05
