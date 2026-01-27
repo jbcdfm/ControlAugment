@@ -128,7 +128,7 @@ def CtrlA_test_model(test_loader,model, criterion,device):
 
 
 
-class DynamicTransformDataset(torch.utils.data.Dataset):
+class MyDataset(torch.utils.data.Dataset):
     def __init__(self, dataset, transform=None):
         self.dataset = dataset
         self.transform = transform
@@ -258,29 +258,26 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
 
     
     
-    
-    
-    Phase_length = params["phase_length"]
     setup = params["setup"]
     epoch_max = params["nmax"]
-
+    phase_length = params["phase_length"]
 
     # Create Dataset instance for training data
     if setup == "modified":
         if dataset == 'cifar10' or dataset == 'cifar100':
             new_train_data, new_train_labels = duplicate_and_flip(train_data)
             train_data = Create_train_Dataset(new_train_data,new_train_labels) 
-            train_data =  DynamicTransformDataset(train_data)
+            train_data =  MyDataset(train_data)
             print("Training dataset updated with mirrored versions")
             epoch_max = epoch_max//2
         else:
-            train_data =  DynamicTransformDataset(train_data)
+            train_data =  MyDataset(train_data)
 
     else:
-        train_data =  DynamicTransformDataset(train_data)
+        train_data =  MyDataset(train_data)
     
     # Create Dataset instance for test data
-    test_data =  DynamicTransformDataset(test_data)  
+    test_data =  MyDataset(test_data)  
     
     # Calculate training data per-channel mean and standard deviation
     data_mean, data_std = su.get_mean_and_std(train_data)
@@ -321,7 +318,7 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
         CtrlA_strengths = 10   # number of gamma values applied to obtain sensitivity curves for each operation
         CtrlA_batch = 125     # 1000/aug_p_batch -> 1000 images per aug strength
         CtrlA_dataset = ctrla_utils.create_CtrlA_test_data(val_data,aug,Naugs=len(transform_vec),Nstrengths=CtrlA_strengths,batch_size=CtrlA_batch, aug_per_batch=aug_p_batch,interp = interp)
-        CtrlA_dataset = DynamicTransformDataset(CtrlA_dataset,transform=val_transform)
+        CtrlA_dataset = MyDataset(CtrlA_dataset,transform=val_transform)
         print("ControlAugment dataset created")
         
         # Create Ctrl-A Dataloader
@@ -341,7 +338,7 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
         Delta_xi_max = 0.1
     
     # After the creation of the Ctrl-A dataset, convert to dataset object:
-    val_data =  DynamicTransformDataset(val_data)   
+    val_data =  MyDataset(val_data)   
     
 
     val_data.transform = val_transform    # Test data transformation
@@ -444,7 +441,7 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
             # Here starts the IA procedure
             if DAtype == 'CtrlA':
             
-                if i%Phase_length == 0 and i<epoch_max:
+                if i%phase_length == 0 and i<epoch_max:
                     phase_flag = False
                     print(f"Phase {j} ended - finding augmentation strengths for next phase with kappa_sp = {kappa_sp:.2f}")
                     phases.append(i)
@@ -484,7 +481,7 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
         
             
             
-            if DAtype!="CtrlA" and i%Phase_length == 0:
+            if DAtype!="CtrlA" and i%phase_length == 0:
                 benchmark = np.asarray(val_correct[::-1][0])/len(val_data)
                 print(f"Train Acc.: {train_correct[-1]/len(train_data)*100:.2f} %, Val. Acc.: {benchmark*100:.2f} %,")
                 print(f"Learning rate: {lr_schedule[i]:.6f}")
@@ -567,7 +564,7 @@ def main():
            "lr": args.learning_rate,
            "wd": args.weight_decay,
            "nmax": args.epochs,
-           "phase_length": args.N_P,
+           "n_p": args.N_P,
            "setup": args.setup,
            "aug_space": args.aug_space
            }
