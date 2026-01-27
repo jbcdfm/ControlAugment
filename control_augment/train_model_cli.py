@@ -333,7 +333,7 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
 
         # Initiate Ctrl-A parameters
         xi = 0.9# 
-        kappa_sp = params["kappa"]            
+        kappa_sp = params["kappa_sp"]            
         Delta_xi_min = 0.005
         Delta_xi_max = 0.1
     
@@ -560,7 +560,7 @@ def main():
     
     args = parser.parse_args()
 
-    dict_train = {"kappa": args.kappa_sp,
+    dict_train = {"kappa_sp": args.kappa_sp,
            "lr": args.learning_rate,
            "wd": args.weight_decay,
            "nmax": args.epochs,
