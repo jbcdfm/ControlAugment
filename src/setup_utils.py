@@ -93,8 +93,8 @@ def setup_model(model_type,device,number_classes):
     if model_type == 'airbench94':
         model = model_lib.airbench_net().to(device)
     if model_type == 'WideResNet-28-10':
-        model = Wide_ResNet(28,10,dropout_rate=0, num_classes=number_classes).to(device)
-        model.apply(WideResNetModel.conv_init)
+        model = WRN.Wide_ResNet(28,10,dropout_rate=0, num_classes=number_classes).to(device)
+        model.apply(WRN.conv_init)
 
     return model
 
@@ -188,3 +188,4 @@ def aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std):
     
 
     return train_transform
+
