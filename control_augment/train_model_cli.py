@@ -553,7 +553,7 @@ def main():
     parser.add_argument("--da_type", type=str, default=cfg.DA_TYPE)
     parser.add_argument("--N", type=int, default=cfg.N_AUGS)
     parser.add_argument("--kappa_sp", type=float, default=cfg.KAPPA_SP)
-    parser.add_argument("--N_P", type=int, default=cfg.PHASE_LENGTH)
+    parser.add_argument("--phase_length", type=int, default=cfg.PHASE_LENGTH)
     parser.add_argument("--setup", type=str, default=cfg.SETUP)
     parser.add_argument("--validation_set", type=str, default=cfg.VAL_SET)
     parser.add_argument("--aug_space", type=str, default=cfg.AUG_SPACE)
@@ -564,7 +564,7 @@ def main():
            "lr": args.learning_rate,
            "wd": args.weight_decay,
            "nmax": args.epochs,
-           "n_p": args.N_P,
+           "n_p": args.phase_length,
            "setup": args.setup,
            "aug_space": args.aug_space
            }
