@@ -6,13 +6,12 @@ Created on Tue Jan 20 09:05:43 2026
 """
 
 import random
-import model_lib
+from src import model_lib
 import torch
 import numpy as np
-from torchvision import datasets, transforms, models
+from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
-from WideResNetModel import Wide_ResNet
-import WideResNetModel
+from src import WideResNetModel as WRN
 
 
 
@@ -187,4 +186,5 @@ def aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std):
             ])
  
     
+
     return train_transform
