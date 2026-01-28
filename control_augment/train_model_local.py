@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 """
 Created on Mon _an 20 
@@ -22,8 +21,14 @@ import os
 import argparse
 import importlib
 from datetime import datetime
+import sys
+from pathlib import Path
+# Add project root to path
+project_root = Path(__file__).resolve().parents[1]  # adjust if nested more
+sys.path.append(str(project_root))
 from src import setup_utils as su
 from src import CtrlA_utils as ctrla_utils
+from src import model_lib
 
 
 # Accuracy Function
@@ -231,7 +236,7 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
         assert type(N_augs) == int, "N_augs must be an integer for CtrlA"
         N = int(N_augs)
         assert N > 0, "N must be positive or 0" 
-        print(f"CtrlA-augmentation: {N_augs}")
+        print(f"CtrlA({N_augs})")
         aug = importlib.import_module(f"src.augmentations_CtrlA_{params['aug_space']}")
         
     elif DAtype == 'TA':
@@ -556,43 +561,42 @@ def log_file_initiate(filename: str, title: str = "Log File", loginfo: dict = No
 
 def main():
     
-    Date = datetime.today().strftime('%Y-%m-%d')
-    datafolder = os.getcwd()+'\\Datafolder'+"\\"+str(Date)
+    date = datetime.today().strftime('%Y-%m-%d')
+    data_folder = os.path.join(os.getcwd(), "Datafolder", date)
     user = "JBC"
-    Optimizer = "SGD"
     dataset = 'cifar10' # 'cifar10' # 'svhn-c' # 'cifar100'
     model_name = 'WideResNet-28-10'  # 'airbench94', 'WideResNet-28-10', "LeNet"
-    Setup = "modified" # "modified" # "standard"
-    Nepochs = 500
+    setup = "modified" # "modified" # "standard"
+    n_epochs = 500
     aug_space = "Control" 
     validation_set = "test_subset"  # "test_subset", "train_subset"
-    N_p = 5 # phase length
+    phase_length = 5 # phase length
     
     
-    if Data == "cifar10":
-        if Setup == "modified":
+    if dataset == "cifar10":
+        if setup == "modified":
             lr = 0.05    # For CIFAR
             wd = 2.5e-4  # For CIFAR
         else:
             lr = 0.1    # For CIFAR
             wd = 5e-4  # For CIFAR
             
-    if Data == "cifar100":
-        if Setup == "modified":
+    if dataset == "cifar100":
+        if setup == "modified":
             lr = 0.05    # For CIFAR
             wd = 5e-4  # For CIFAR
         else:
             lr = 0.1    # For CIFAR
             wd = 5e-4  # For CIFAR
             
-    elif "svhn" in Data:
+    elif "svhn" in dataset:
         lr = 0.005    # For svhn-core
         wd = 0.005  # For svhn.core    
 
     
         
-    if not os.path.isdir(datafolder):
-        os.makedirs(datafolder)
+    if not os.path.isdir(data_folder):
+        os.makedirs(data_folder)
     
     CtrlA = True
     TA = False   
@@ -601,7 +605,7 @@ def main():
     
     if CtrlA:
         DAtype = 'CtrlA'
-        N_augs = 2
+        N = 2
         if N == 1:
             kappa_sp = 1.0
         elif N == 2:
@@ -618,9 +622,9 @@ def main():
     dict_train = {"kappa_sp": kappa_sp,
                "lr": lr,
                "wd": wd,
-               "nmax": Nepochs,
-               "n_p": N_p,
-               "setup": Setup,
+               "nmax": n_epochs,
+               "phase_length": phase_length,
+               "setup": setup,
                "aug_space": aug_space,
                }
 
