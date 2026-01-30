@@ -8,17 +8,14 @@ Created on Mon _an 20
 import torch
 import torch.nn as nn
 import torch.utils.data
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 from torchvision import transforms
 import numpy as np
 import time
-import multiprocessing
 from torch.utils.data import random_split
 from torch.utils.data import Subset
 from torchvision.transforms import functional as F2, InterpolationMode
-from torchvision.transforms import v2
 import os
-import argparse
 import importlib
 from datetime import datetime
 import sys
@@ -28,201 +25,15 @@ project_root = Path(__file__).resolve().parents[1]  # adjust if nested more
 sys.path.append(str(project_root))
 from src import setup_utils as su
 from src import CtrlA_utils as ctrla_utils
-from src import model_lib
-
-
-# Accuracy Function
-def accuracy(outputs, labels):
-    _, preds = torch.max(outputs, dim=1)
-    return torch.tensor(torch.sum(preds == labels).item() / len(preds))
-
-# Optimizer update Function
-def optimize(optimizer, loss):
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-    return
-
-# Training Function
-def train_model(loader, optimizer, model, criterion, device):
-    trn_corr = 0
-    trn_loss = 0
-    model.train()
-    for b, (X_train, y_train) in enumerate(loader):
-        X_train, y_train = X_train.to(device), y_train.to(device)
-        y_pred = model(X_train)
-        loss = criterion(y_pred, y_train)
-        _, predicted = torch.max(y_pred.data, 1)
-        trn_corr += (predicted == y_train).sum().item()
-        trn_loss += loss.item()
-        optimize(optimizer, loss)
-    return trn_corr, trn_loss
-
-# Testing Function
-def test_model(loader, model, criterion, device):
-    tst_corr = 0
-    tst_loss = 0.0
-    model.eval()
-    with torch.no_grad():
-        for b, (X_test, y_test) in enumerate(loader):
-            X_test, y_test = X_test.to(device), y_test.to(device)
-            y_pred = model(X_test)
-            loss_test = criterion(y_pred, y_test)
-            _, predicted = torch.max(y_pred.data, 1)
-            tst_corr += (predicted == y_test).sum().item()
-            tst_loss += loss_test.item()
-            
-
-            
-    return tst_corr, tst_loss
-
-def TTA_test_model(test_set, model, criterion, TTA_transforms, batch_sz, num_classes, device):
-    
-    test_size = len(test_set)
-    y_out = torch.zeros([test_size*len(TTA_transforms),num_classes])
-    y_true = torch.zeros([test_size,])
-    
-    for k in range(len(TTA_transforms)):
-        test_set.transform = TTA_transforms[k]
-        
-        test_loader = DataLoader(
-            test_set,
-            batch_size = batch_sz, 
-            shuffle=False,
-            pin_memory=True,
-            num_workers=1,
-            persistent_workers=True,
-            )
-        
-        # test_loader = DataLoader(test_set,batch_size = batch_sz,shuffle=False)
-        model.eval()
-        with torch.no_grad():
-            for b, (X_test, y_test) in enumerate(test_loader):
-                batch_length = len(y_test)
-                X_test, y_test = X_test.to(device), y_test.to(device)
-                out = nn.functional.softmax(model(X_test), dim=1)
-                y_out[k*test_size+b*batch_sz:k*test_size+b*batch_sz+batch_length,:] = out#torch.argmax(out, dim=1)
-                if k==0:
-                    y_true[b*batch_sz:(b)*batch_sz+batch_length] = y_test
-    
-    y_pred = torch.argmax(y_out[:test_size], dim=1)              
-    test_corr = (y_pred == y_true).sum().item()
-    test_acc = test_corr/test_size*100
-    
-    y_TTA = y_out.view(len(TTA_transforms), test_size, num_classes).mean(dim=0)
-    y_pred_TTA = torch.argmax(y_TTA[:test_size], dim=1)      
-    test_corr = (y_pred_TTA == y_true).sum().item()
-    test_acc_TTA = test_corr/test_size*100
-    
-                
-    return test_acc, test_acc_TTA
-
-
-
-# Eval Function for CtrlA dataset
-def CtrlA_test_model(test_loader,model, criterion,device):
-    model.eval()
-    tst_corr = []
-    with torch.no_grad():
-        for b,(X_test,y_test) in enumerate(test_loader):
-            X_test = X_test.to(device); y_test = y_test.to(device)
-            y_pred = model.forward(X_test)
-            _, predicted = torch.max(y_pred.data, 1)
-            tst_corr.append((predicted == y_test).sum().item()) # Get result divided in batches
-
-    return tst_corr
-
-
-
-class MyDataset(torch.utils.data.Dataset):
-    def __init__(self, dataset, transform=None):
-        self.dataset = dataset
-        self.transform = transform
-
-    def set_transform(self, transform):
-        self.transform = transform
-
-    def __getitem__(self, idx):
-        data, target = self.dataset[idx]
-        if self.transform:
-            data = self.transform(data)
-        return data, target
-
-    def __len__(self):
-        return len(self.dataset)
+from src.transforms_utils import duplicate_and_flip, aug_pipeline
+from src.logger_utils import log_file_initiate, log_run_result, log_summary
+from src.engine import train_model, test_model, test_model_tta, CtrlA_test_model
 
 
 
 
-
-def duplicate_and_flip(train_data):
-    """
-    Args:
-        tuple: (image, label): image is type torch, and has shape (N, 3, 32, 32)
-    Returns:
-        tuple: (image, label) image has shape (2N, 3, 32, 32)
-        as every image is horisontally mirrored and stored alongside
-        the originals.
-    """
-    train_data_duplicated = torch.zeros([len(train_data)*2, 3, 32, 32])
-    train_labels_duplicated = torch.zeros([len(train_data)*2,])
-    for n in range(len(train_data)*2):
-        # if n < len(train_data):
-        data, label = train_data[n % len(train_data) ]
-        if n >= len(train_data):
-            data = v2.functional.horizontal_flip(data)
-            
-        train_data_duplicated[n,:,:,:] = data
-        train_labels_duplicated[n] = int(label) 
-        
-    return  train_data_duplicated, train_labels_duplicated
-
-
-
-
-class Create_train_Dataset(Dataset):
-    def __init__(self, data, labels, transform=None):
-        """
-        Args:
-            data (torch.Tensor): Tensor of images with shape (N, 3, 32, 32)
-            labels (torch.Tensor): Tensor of labels with shape (N,)
-            transform (callable, optional): Optional transform to apply to the images.
-        """
-        assert data.shape[0] == labels.shape[0], "Data and labels must have the same number of samples"
-        self.data = data
-        self.labels = labels
-        self.transform = transform
-
-    def __len__(self):
-        """Return the number of samples."""
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        """
-        Retrieve a single sample and its corresponding label.
-        
-        Args:
-            idx (int): Index of the sample to retrieve.
-        
-        Returns:
-            tuple: (image, label) where image is a transformed tensor (if transform is provided).
-        """
-        image, label = self.data[idx], self.labels[idx]
-        
-        if self.transform:
-            image = self.transform(image)  # Apply the transform to the image
-
-        label = label.long()
-
-        return image, label
-
-        
-
-
-
-
-# Main Training Loop
-def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-28-10', val_type = "test_subset", DAtype = 'CtrlA'):
+# Main code
+def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'WideResNet-28-10', val_type = "test_subset", DAtype = 'CtrlA'):
     
 
     # ASSERTIONS
@@ -231,6 +42,8 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
     assert val_type in ["test_subset", "train_subset"], f"Invalid value: {val_type}"
     assert DAtype in ["CtrlA", "TA"], f"Invalid value: {DAtype}"
     assert params["setup"] in ["standard", "modified"], f"Invalid value: {params['setup']}"
+    assert params["lr_schedule_type"] in ["cos", "erf"], f"Invalid value: {params['lr_schedule_type']}"
+
    
     if DAtype == 'CtrlA':
         assert type(N_augs) == int, "N_augs must be an integer for CtrlA"
@@ -273,18 +86,18 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
     if setup == "modified":
         if dataset == 'cifar10' or dataset == 'cifar100':
             new_train_data, new_train_labels = duplicate_and_flip(train_data)
-            train_data = Create_train_Dataset(new_train_data,new_train_labels) 
-            train_data =  MyDataset(train_data)
+            train_data = su.Create_train_Dataset(new_train_data,new_train_labels) 
+            train_data = su.MyDataset(train_data)
             print("Training dataset updated with mirrored versions")
-            epoch_max = epoch_max//2
+            epoch_max = epoch_max//2   # divide epoch_max by 2 due to additions of mirror data
         else:
-            train_data =  MyDataset(train_data)
+            train_data = su.MyDataset(train_data)
 
     else:
-        train_data =  MyDataset(train_data)
+        train_data = su.MyDataset(train_data)
     
     # Create Dataset instance for test data
-    test_data =  MyDataset(test_data)  
+    test_data =  su.MyDataset(test_data)  
     
     # Calculate training data per-channel mean and standard deviation
     data_mean, data_std = su.get_mean_and_std(train_data)
@@ -303,17 +116,21 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
            
     # Define learning parameters
     lr0 = params["lr"]
-    lr_schedule = 1/2*lr0*(1+np.cos(np.pi*np.linspace(0,epoch_max,epoch_max+1)/(epoch_max+1)))        
     wd = params["wd"]
+    lr_schedule_type = params["lr_schedule_type"]
+    if lr_schedule_type == "cos":
+        lr_schedule = 1/2*lr0*(1+np.cos(np.pi*np.linspace(0,epoch_max,epoch_max+1)/(epoch_max+1)))
+    elif lr_schedule_type == "erf":   # only used with the airbench94 model to create results in Fig. 4.
+        lr_schedule = ctrla_utils.erf_fit(np.linspace(0,epoch_max,epoch_max+1),epoch_max/2,lr0/2,lr0/2,epoch_max/4)
+
     # Loss criteria
     criterion = nn.CrossEntropyLoss()
-    batch_sz = 125  
+    batch_sz = 125
     
     if setup == "modified": # modified setup uses BILINEAR interpolation
         interp = InterpolationMode.BILINEAR
     else: 
         interp = InterpolationMode.NEAREST
-    print(f"Interpolation type in affine augmentations: {interp}")
     
     
     if DAtype == 'CtrlA':    
@@ -325,7 +142,7 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
         CtrlA_strengths = 10   # number of gamma values applied to obtain sensitivity curves for each operation
         CtrlA_batch = 125     # 1000/aug_p_batch -> 1000 images per aug strength
         CtrlA_dataset = ctrla_utils.create_CtrlA_test_data(val_data,aug,Naugs=len(transform_vec),Nstrengths=CtrlA_strengths,batch_size=CtrlA_batch, aug_per_batch=aug_p_batch,interp = interp)
-        CtrlA_dataset = MyDataset(CtrlA_dataset,transform=val_transform)
+        CtrlA_dataset = su.MyDataset(CtrlA_dataset,transform=val_transform)
         print("ControlAugment dataset created")
         
         # Create Ctrl-A Dataloader
@@ -345,7 +162,7 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
         Delta_xi_max = 0.1
     
     # After the creation of the Ctrl-A dataset, convert to dataset object:
-    val_data =  MyDataset(val_data)   
+    val_data =  su.MyDataset(val_data)   
     
 
     val_data.transform = val_transform    # Test data transformation
@@ -395,13 +212,12 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
     j = 1  # phase index stepper
         
 
-    print("Initiating training...")
     train_flag = True
     while train_flag:
 
         if DAtype == "CtrlA":    # Rerun this every phase to update Gamma and alpha
             DataAugTransform = aug.ControlAugment(gamma = Gamma, skew = alpha, Naugs = N,interpolation=interp)
-            train_transform = su.aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std)
+            train_transform = aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std)
             
             train_data.transform = train_transform   # Update training data transformations
             train_loader = DataLoader(
@@ -418,6 +234,7 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
             print("Transform pipeline:")
             print(train_transform)
             start_time = time.time()
+            print("Initiating training...")
         
         print(f"Phase {j} | Learning rate: {lr_schedule[i-1]:.6f}")
         ############ Here Starts Phase j ###########
@@ -473,7 +290,7 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
                         elif xi > 0.99:   # Set upper limit of xi
                             xi = 0.99
 
-                        print(f"New threshold value, xi: {xi:.3f}, based on kappa_{j}: {kappa[-1]:.2f}")
+                        print(f"New threshold value, xi: {xi:.3f}, kappa_{j}: {kappa[-1]:.2f}")
 
 
                     benchmark = np.asarray(val_correct[::-1][0])/len(val_data)
@@ -527,8 +344,10 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
                       ]
 
     # Evaluate Model
-    test_acc, test_acc_TTA = TTA_test_model(test_data, model, criterion, TTA_transforms, batch_sz, number_classes, device)
+    test_acc, test_acc_TTA = test_model_tta(test_data, model, criterion, TTA_transforms, batch_sz, number_classes, device)
     
+    
+ 
     # Freeing memory
     del model
     torch.cuda.empty_cache()
@@ -537,37 +356,16 @@ def train(N_augs=1, params = {}, dataset = 'cifar10', model_type = 'WideResNet-2
 
 
 
-def log_file_initiate(filename: str, title: str = "Log File", loginfo: dict = None):
-    """
-    Creates a log file and writes an initial header with a timestamp, and adds 
-    information incl. dataset, model type, and augmentation method.
-    
-    :param filename: Name of the log file (e.g., "log.txt").
-    :param title: Title of the log file.
-    :param loginfo: Dictionary of metadata to include in the log header.
-    """
-    with open(filename, "w") as log_file:
-        log_file.write(f"# {title}\n")
-        log_file.write(f"# Created on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        log_file.write("\n")  # Add a blank line for readability
-        
-        if loginfo:
-            log_file.write("# Info:\n")
-            for key, value in loginfo.items():
-                log_file.write(f"#   {key}: {value}\n")
-        
-        log_file.write("\n")  # Add a blank line for readability
-
 
 def main():
     
     date = datetime.today().strftime('%Y-%m-%d')
     data_folder = os.path.join(os.getcwd(), "Datafolder", date)
-    user = "JBC"
     dataset = 'cifar10' # 'cifar10' # 'svhn-c' # 'cifar100'
     model_name = 'WideResNet-28-10'  # 'airbench94', 'WideResNet-28-10', "LeNet"
     setup = "modified" # "modified" # "standard"
     n_epochs = 500
+    lr_schedule_type = "cos"
     aug_space = "Control" 
     validation_set = "test_subset"  # "test_subset", "train_subset"
     phase_length = 5 # phase length
@@ -602,6 +400,9 @@ def main():
     TA = False   
     assert CtrlA != TA, "Can't have both"
     
+    loginfo = {"Filename": __file__,  "Model type": model_name,
+               "Dataset": dataset, "Learning rate": lr, "Weight decay": wd, "Learning rate schedule": lr_schedule_type,
+               "Pool": aug_space, "Validation set type": validation_set }
     
     if CtrlA:
         DAtype = 'CtrlA'
@@ -612,31 +413,61 @@ def main():
             kappa_sp = 1.5
         elif N == 3:
             kappa_sp = 1.5
-            
+        
+        log_name = str(model_name)+'_'+str(dataset)+f'_CtrlA({N})_kappasp{kappa_sp}_{setup}-setup_{aug_space}-pool.txt'
+        loginfo.update({"Augmentation method": f"CtrlA({N})","kappa_sp": kappa_sp})
+
     if TA:
         DAtype = "TA"
         kappa_sp = 0
         N = 0
+        log_name = str(model_name)+'_'+str(dataset)+f'_TA_{setup}-setup_{aug_space}-pool.txt'
+        loginfo.update({"Augmentation method": "TA"})
+
 
 
     dict_train = {"kappa_sp": kappa_sp,
                "lr": lr,
+               "lr_schedule_type": lr_schedule_type,
                "wd": wd,
                "nmax": n_epochs,
                "phase_length": phase_length,
                "setup": setup,
                "aug_space": aug_space,
                }
+    
+    
+    folder_and_file = data_folder+'\\'+log_name
 
-    acc, acc_TTA, acc_val, gamma, alpha, kappa, lr = train(N_augs= N,
-                                                       params = dict_train, 
-                                                       model_type = model_name, 
-                                                       dataset = dataset, 
-                                                       val_type = validation_set, 
-                                                       DAtype = DAtype) # Run model training instance
+    log_file_initiate(filename=folder_and_file,loginfo=loginfo)
+
+    Final_correct = []  # list to append test accuracies of each run
+    Final_correct_TTA = []  # list to append final TTA accuracies of each run
+    Final_correct_val = [] # list to append final validation accuracies of each run
+
+    n_runs = 4
+    for j in range(n_runs):
+        
+        
+        acc, acc_TTA, acc_val, Gamma, alpha, kappa, lr = setup_and_train(N_augs= N,
+                                                           params = dict_train, 
+                                                           model_type = model_name, 
+                                                           dataset = dataset, 
+                                                           val_type = validation_set, 
+                                                           DAtype = DAtype) # Run model training instance
+        Final_correct.append(acc)
+        Final_correct_TTA.append(acc_TTA)
+        Final_correct_val.append(acc_val[-1])
+        
+    
+        print(acc,acc_TTA,acc_val[-1])
+        log_run_result(folder_and_file,j,acc_val,acc,acc_TTA,kappa,lr,Gamma, alpha, phase_length)
+        
+    log_summary(folder_and_file,Final_correct,Final_correct_TTA,Final_correct_val)
 
 
 if __name__ == "__main__":
+    import multiprocessing
     multiprocessing.set_start_method("spawn", force=True)
     main()
  
