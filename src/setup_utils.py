@@ -12,56 +12,63 @@ import numpy as np
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
 from src import WideResNetModel as WRN
+from torch.utils.data import Dataset
 
 
 
-class CutOut:
-    def __init__(self, mask_size, mask_color=(0.0, 0.0, 0.0)):
+
+class MyDataset(torch.utils.data.Dataset):
+    def __init__(self, dataset, transform=None):
+        self.dataset = dataset
+        self.transform = transform
+
+    def set_transform(self, transform):
+        self.transform = transform
+
+    def __getitem__(self, idx):
+        data, target = self.dataset[idx]
+        if self.transform:
+            data = self.transform(data)
+        return data, target
+
+    def __len__(self):
+        return len(self.dataset)
+
+class Create_train_Dataset(Dataset):
+    def __init__(self, data, labels, transform=None):
         """
         Args:
-            mask_size (int): Size of the square mask.
-            mask_color (tuple of float): RGB values for the mask (length must match C)
+            data (torch.Tensor): Tensor of images with shape (N, 3, 32, 32)
+            labels (torch.Tensor): Tensor of labels with shape (N,)
+            transform (callable, optional): Optional transform to apply to the images.
         """
-        self.mask_size = mask_size
-        self.mask_color = mask_color
+        assert data.shape[0] == labels.shape[0], "Data and labels must have the same number of samples"
+        self.data = data
+        self.labels = labels
+        self.transform = transform
 
-    def __call__(self, img):
+    def __len__(self):
+        """Return the number of samples."""
+        return len(self.data)
+
+    def __getitem__(self, idx):
         """
-        Args:
-            img (Tensor): Single image (C,H,W)
-        Returns:
-            Tensor: Image with random square masked out
-        """
-        if not torch.is_tensor(img):
-            raise TypeError("Input should be a torch.Tensor")
+        Retrieve a single sample and its corresponding label.
         
-        C, H, W = img.shape
-        if len(self.mask_color) != C:
-            raise ValueError(f"mask_color length {len(self.mask_color)} does not match number of channels {C}")
+        Args:
+            idx (int): Index of the sample to retrieve.
+        
+        Returns:
+            tuple: (image, label) where image is a transformed tensor (if transform is provided).
+        """
+        image, label = self.data[idx], self.labels[idx]
+        
+        if self.transform:
+            image = self.transform(image)  # Apply the transform to the image
 
-        # Random center
-        cx = random.randint(0, W - 1)
-        cy = random.randint(0, H - 1)
+        label = label.long()
 
-        mask_half = self.mask_size // 2
-        x1, x2 = max(cx - mask_half, 0), min(cx + mask_half, W)
-        y1, y2 = max(cy - mask_half, 0), min(cy + mask_half, H)
-
-        # Apply mask per channel
-        for i in range(C):
-            img[i, y1:y2, x1:x2] = self.mask_color[i]
-
-        return img
-    def __repr__(self) -> str:
-        s = (
-            f"{self.__class__.__name__}("
-            f" Mask size: {self.mask_size}"
-            f", Mask color: {self.mask_color}"
-            f")"
-        )
-        return s  
-
-
+        return image, label
 
 
 def load_dataset(dataset):
@@ -120,72 +127,4 @@ def get_mean_and_std(train_data):
     
     return tuple(mean.tolist()), tuple(std.tolist())
 
-
-
-def aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std):
-    
-
-    if dataset == 'cifar10':
-        if setup == "modified":  # our setup for CIFAR, horizontal flips embedded
-            train_transform = transforms.Compose([
-                transforms.RandomCrop(32,padding=4,padding_mode='edge'),
-                transforms.ToPILImage(),
-                DataAugTransform,   
-                transforms.ToTensor(),
-                transforms.Normalize(data_mean, data_std),
-            ])
-        else: #else use standard pipelline
-            train_transform = transforms.Compose([
-                transforms.RandomHorizontalFlip(0.5),
-                transforms.RandomCrop(32,padding=4,padding_mode='edge'),
-                transforms.ToPILImage(),
-                DataAugTransform,
-                transforms.ToTensor(),
-                transforms.Normalize(data_mean, data_std),
-                CutOut(16),
-            ])
-            
-    if dataset == 'cifar100':
-        if setup == "modified":  # our setup for CIFAR, horizontal flips embedded
-            train_transform = transforms.Compose([
-                transforms.RandomCrop(32,padding=4,padding_mode='edge'),
-                transforms.ToPILImage(),
-                DataAugTransform,
-                transforms.ToTensor(),
-                transforms.Normalize(data_mean, data_std),
-                CutOut(16),
-            ])
-        else: #else use standard pipelline
-            train_transform = transforms.Compose([
-                transforms.RandomHorizontalFlip(0.5),
-                transforms.RandomCrop(32,padding=4,padding_mode='edge'),
-                transforms.ToPILImage(),
-                DataAugTransform,
-                transforms.ToTensor(),
-                transforms.Normalize(data_mean, data_std),
-                CutOut(16),
-            ])
-            
-    if dataset == 'svhn-c':
-        if setup == "modified": # our setup for SVHN, inverted images embedded
-            train_transform = transforms.Compose([
-                transforms.RandomInvert(p=0.5),
-                transforms.ToPILImage(),
-                DataAugTransform,
-                transforms.ToTensor(),
-                transforms.Normalize(data_mean, data_std),
-                CutOut(10),
-            ])
-        else: #else use standard pipelline
-            train_transform = transforms.Compose([
-                transforms.ToPILImage(),
-                DataAugTransform,
-                transforms.ToTensor(),
-                transforms.Normalize(data_mean, data_std),
-                CutOut(16),
-            ])
- 
-    
-
-    return train_transform
 

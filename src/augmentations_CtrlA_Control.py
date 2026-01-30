@@ -1,9 +1,6 @@
-# import math
-# from enum import Enum
 from typing import Dict, List, Optional, Tuple
 import torch
 from torch import Tensor
-# from torchvision.transforms import InterpolationMode
 from torchvision.transforms import functional as F, InterpolationMode
 import random
 import numpy as np
@@ -45,33 +42,23 @@ def _apply_op(
     img: Tensor, op_name: str, magnitude: float, interpolation: InterpolationMode, fill: Optional[List[float]]
 ):
     if op_name == "ShearX":
-        # magnitude should be arctan(magnitude)
-        # official autoaug: (1, level, 0, 0, 1, 0)
-        # https://github.com/tensorflow/models/blob/dd02069717128186b88afa8d857ce57d17957f03/research/autoaugment/augmentation_transforms.py#L290
-        # compared to
-        # torchvision:      (1, tan(level), 0, 0, 1, 0)
-        # https://github.com/pytorch/vision/blob/0c2373d0bba3499e95776e7936e207d8a1676e65/torchvision/transforms/functional.py#L976
-        img = F.affine(
+       img = F.affine(
             img,
             angle=0.0,
             translate=[0, 0],
             scale=1.0,
             shear=[45.*magnitude,0.],
-            # shear =[6.3*np.sign(magnitude),0],
             interpolation=interpolation,
             fill=fill,
             center=[0, 0],
         )
     elif op_name == "ShearY":
-        # magnitude should be arctan(magnitude)
-        # See above
         img = F.affine(
             img,
             angle=0.0,
             translate=[0, 0],
             scale=1.0,
             shear=[0.0, 45.*magnitude],
-            # shear =[0,6.3*np.sign(magnitude)],
             interpolation=interpolation,
             fill=fill,
             center=[0, 0],
@@ -81,7 +68,6 @@ def _apply_op(
             img,
             angle=0.0,
             translate=[int(magnitude*img.size[1]/2), 0],
-            # translate=[int(np.sign(magnitude)*5), 0],
             scale=1.0,
             interpolation=interpolation,
             shear=[0.0, 0.0],
@@ -92,7 +78,6 @@ def _apply_op(
             img,
             angle=0.0,
             translate=[0,int(magnitude*img.size[0]/2)],
-            # translate=[0,int(np.sign(magnitude)*5)],
             scale=1.0,
             interpolation=interpolation,
             shear=[0.0, 0.0],
