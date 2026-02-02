@@ -16,6 +16,7 @@ from torch.utils.data import random_split
 from torch.utils.data import Subset
 from torchvision.transforms import functional as F2, InterpolationMode
 import os
+import gc
 import importlib
 from datetime import datetime
 import sys
@@ -50,7 +51,7 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
         N = int(N_augs)
         assert N > 0, "N must be positive or 0" 
         print(f"CtrlA({N_augs})")
-        aug = importlib.import_module(f"src.augmentations_CtrlA_{params['aug_space']}")
+        aug = importlib.import_module(f"src.augmentations_CtrlA_{params['aug_space']}")   # import based on aug_space
         
     elif DAtype == 'TA':
         aug = importlib.import_module("src.augmentations_TA")
@@ -333,6 +334,7 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     val_acc = np.asarray(val_correct)/len(val_data)*100
     print(f"Final validation accuracy of {val_acc[::-1][0]} %")
 
+    
 
     if "cifar" in dataset:
         TTA_transforms = [transforms.Compose([transforms.Normalize(data_mean, data_std)]),
@@ -348,8 +350,13 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     
     
  
-    # Freeing memory
-    del model
+    # Reset
+    gc.collect()
+    del train_loader, val_loader, CtrlA_loader
+    del model, optimizer
+    del CtrlA_dataset, train_data, val_data, test_data
+
+    torch.cuda.synchronize()
     torch.cuda.empty_cache()
     
     return test_acc, test_acc_TTA, val_acc, arg_strengths, alpha_strengths, kappa, lr_schedule
@@ -361,12 +368,12 @@ def main():
     
     date = datetime.today().strftime('%Y-%m-%d')
     data_folder = os.path.join(os.getcwd(), "Datafolder", date)
-    dataset = 'cifar10' # 'cifar10' # 'svhn-c' # 'cifar100'
+    dataset = 'cifar100' # 'cifar10' # 'svhn-c' # 'cifar100'
     model_name = 'WideResNet-28-10'  # 'airbench94', 'WideResNet-28-10', "LeNet"
     setup = "modified" # "modified" # "standard"
     n_epochs = 500
     lr_schedule_type = "cos"
-    aug_space = "Control" 
+    aug_space = "Wide" 
     validation_set = "test_subset"  # "test_subset", "train_subset"
     phase_length = 5 # phase length
     
@@ -445,7 +452,7 @@ def main():
     Final_correct_TTA = []  # list to append final TTA accuracies of each run
     Final_correct_val = [] # list to append final validation accuracies of each run
 
-    n_runs = 4
+    n_runs = 5
     for j in range(n_runs):
         
         

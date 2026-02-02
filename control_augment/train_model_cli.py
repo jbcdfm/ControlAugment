@@ -19,6 +19,7 @@ import argparse
 import importlib
 from datetime import datetime
 import sys
+import gc
 from pathlib import Path
 # Add project root to path
 project_root = Path(__file__).resolve().parents[1]  # adjust if nested more
@@ -177,7 +178,7 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
 
     if DAtype == "TA":
         DataAugTransform = aug.TrivialAugment(aug_space=params["aug_space"],interpolation=interp)
-        train_transform = su.aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std)
+        train_transform = aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std)
 
         train_data.transform = train_transform   # Update training data transformations
         train_loader = DataLoader(
@@ -344,8 +345,13 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     # Evaluate Model
     test_acc, test_acc_TTA = test_model_tta(test_data, model, criterion, TTA_transforms, batch_sz, number_classes, device)
     
-    # Freeing memory
-    del model
+    
+    # Reset
+    gc.collect()
+    del train_loader, val_loader, CtrlA_loader
+    del model, optimizer
+    del CtrlA_dataset, train_data, val_data, test_data
+    torch.cuda.synchronize()
     torch.cuda.empty_cache()
     
     return test_acc, test_acc_TTA, val_acc, arg_strengths, alpha_strengths, kappa, lr_schedule
