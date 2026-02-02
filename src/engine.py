@@ -57,9 +57,8 @@ def test_model_tta(test_set, model, criterion, TTA_transforms, batch_sz, num_cla
             test_set,
             batch_size = batch_sz, 
             shuffle=False,
-            pin_memory=True,
-            num_workers=1,
-            persistent_workers=True,
+            pin_memory=False,
+            num_workers=0
             )
         
         # test_loader = DataLoader(test_set,batch_size = batch_sz,shuffle=False)

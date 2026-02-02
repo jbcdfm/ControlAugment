@@ -182,7 +182,6 @@ class SingleAugment(torch.nn.Module):
             "Posterize": (gamma,False),
             "AutoContrast": (gamma,False),
             "Equalize": (gamma,False),
-            # "CutOut": (gamma,False)
         }
 
     def forward(self, img: Tensor) -> Tensor:

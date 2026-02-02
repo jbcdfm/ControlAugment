@@ -45,7 +45,7 @@ class CutOut:
     def __repr__(self) -> str:
         s = (
             f"{self.__class__.__name__}("
-            f" Mask size: {self.mask_size}"
+            f"Mask size: {self.mask_size}"
             f", Mask color: {self.mask_color}"
             f")"
         )
