@@ -1,7 +1,5 @@
 # ControlAugment (Ctrl-A)
 
-**Ctrl-A: Control-Driven Online Data Augmentation**
-
 This repository contains the official implementation of **Ctrl-A**, a control-driven, online data augmentation framework proposed in the paper:
 
 > **Ctrl-A: Control-Driven Online Data Augmentation**
@@ -27,6 +25,41 @@ This repository provides:
 
 ---
 
+## Installation
+
 ```bash
 git clone https://github.com/jbcdfm/ControlAugment.git
 cd ControlAugment
+
+```bash
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+venv\Scripts\activate     # Windows
+
+```bash
+pip install -r requirements.txt
+
+
+## Run an experiment
+An experiment can be run using the client file in the folder controlaugment/
+```bash
+python train_model_cli.py
+
+Alternatively, an IDE-friendly local version also exists as train_model_local.py
+
+
+## Customizing experiments
+
+
+
+
+## Citation
+@inproceedings{YourPaper2025,
+  title={Ctrl-A: Control-Driven Online Data Augmentation},
+  author={Your Name and Coauthors},
+  year={2025},
+  ...
+}
+
+
+
