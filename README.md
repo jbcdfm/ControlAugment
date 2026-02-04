@@ -50,11 +50,12 @@ pip install -r requirements.txt
 An experiment can be run using the client file in the folder controlaugment/
 ```bash
 python train_model_cli.py
-
-Alternatively, an IDE-friendly local version also exists as train_model_local.py
+```
+Alternatively, an IDE-friendly local version also exists as train_model_local.py. 
 
 
 ## Customizing experiments
+
 
 
 
