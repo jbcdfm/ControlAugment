@@ -47,6 +47,8 @@ ctrla_env\Scripts\activate
 pip install -r requirements.txt
 ```
 
+---
+
 ## Quick start
 An experiment can be run using the client file in the folder control_augment/
 ```bash
@@ -54,6 +56,7 @@ python control_augment/train_model_cli.py
 ```
 Alternatively, an IDE-friendly local version also exists as control_augment/train_model_local.py. 
 
+---
 
 ## Customizing experiments
 The configuration files reside in src/configs, and may be selected as
@@ -65,16 +68,19 @@ In addition, single arguments may configured as
 python control_augment/train_model_cli.py --config config_cifar10_modified --epochs 300 --N 2 --kappa_sp 1
 ```
 
+---
 
 ## Citation
 
 
 
+---
 
 ## Reference repos
 This work and repository were largely inspired by the [TrivialAugment](https://github.com/automl/trivialaugment) project.
 The data augmentation operations are implemented using PyTorch’s `torchvision` package.
 
+---
 
 
 
