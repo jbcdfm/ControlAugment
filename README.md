@@ -45,7 +45,7 @@ venv\Scripts\activate     # Windows
 pip install -r requirements.txt
 ```
 
-## Run an experiment
+## Quick start
 An experiment can be run using the client file in the folder control_augment/
 ```bash
 python train_model_cli.py
@@ -54,6 +54,16 @@ Alternatively, an IDE-friendly local version also exists as train_model_local.py
 
 
 ## Customizing experiments
+The configuration files reside in src/configs, and may be selected as
+```bash
+python train_model_cli.py --config config_cifar10_standard
+```
+In addition, single arguments may configured as
+```bash
+python train_model_cli.py --config config_cifar10_modified --epochs 300 --N 2 --kappa_sp 1
+```
+
+
 
 
 
