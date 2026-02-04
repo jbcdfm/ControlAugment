@@ -27,7 +27,6 @@ This repository provides:
 
 ## Installation
 
-
 ```bash
 # Clone the repo
 git clone https://github.com/jbcdfm/ControlAugment.git
@@ -47,7 +46,7 @@ pip install -r requirements.txt
 ```
 
 ## Run an experiment
-An experiment can be run using the client file in the folder controlaugment/
+An experiment can be run using the client file in the folder control_augment/
 ```bash
 python train_model_cli.py
 ```
@@ -55,6 +54,7 @@ Alternatively, an IDE-friendly local version also exists as train_model_local.py
 
 
 ## Customizing experiments
+
 
 
 
