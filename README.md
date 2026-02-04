@@ -63,7 +63,7 @@ The configuration files reside in src/configs, and may be selected as
 ```bash
 python control_augment/train_model_cli.py --config config_cifar10_standard
 ```
-In addition, single arguments may configured as
+In addition, single arguments may be configured as
 ```bash
 python control_augment/train_model_cli.py --config config_cifar10_modified --epochs 300 --N 2 --kappa_sp 1
 ```
@@ -81,6 +81,7 @@ This work and repository were largely inspired by the [TrivialAugment](https://g
 The data augmentation operations are implemented using PyTorch’s `torchvision` package.
 
 ---
+
 
 
 
