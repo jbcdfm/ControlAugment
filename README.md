@@ -34,10 +34,14 @@ cd ControlAugment
 ```
 
 ```bash
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate     # Windows
+# Create a descriptive virtual environment
+python -m venv ctrla_env
+
+# Activate the environment
+# Linux / Mac:
+source ctrla_env/bin/activate
+# Windows:
+# ctrla_env\Scripts\activate
 ```
 
 ```bash
@@ -62,6 +66,7 @@ In addition, single arguments may configured as
 ```bash
 python train_model_cli.py --config config_cifar10_modified --epochs 300 --N 2 --kappa_sp 1
 ```
+
 
 
 
