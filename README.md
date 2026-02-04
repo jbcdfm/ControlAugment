@@ -39,9 +39,9 @@ python -m venv ctrla_env
 
 # Activate the environment
 # Linux / Mac:
-source ctrla_env/bin/activate
+# source ctrla_env/bin/activate
 # Windows:
-# ctrla_env\Scripts\activate
+ctrla_env\Scripts\activate
 ```
 
 ```bash
@@ -66,6 +66,7 @@ In addition, single arguments may configured as
 ```bash
 python train_model_cli.py --config config_cifar10_modified --epochs 300 --N 2 --kappa_sp 1
 ```
+
 
 
 
