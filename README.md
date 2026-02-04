@@ -27,18 +27,24 @@ This repository provides:
 
 ## Installation
 
-```bash
-git clone https://github.com/jbcdfm/ControlAugment.git
-cd ControlAugment
 
 ```bash
+# Clone the repo
+git clone https://github.com/jbcdfm/ControlAugment.git
+cd ControlAugment
+```
+
+```bash
+# Create virtual environment
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
 venv\Scripts\activate     # Windows
+```
 
 ```bash
+# Install required dependencies
 pip install -r requirements.txt
-
+```
 
 ## Run an experiment
 An experiment can be run using the client file in the folder controlaugment/
@@ -53,13 +59,6 @@ Alternatively, an IDE-friendly local version also exists as train_model_local.py
 
 
 
-## Citation
-@inproceedings{YourPaper2025,
-  title={Ctrl-A: Control-Driven Online Data Augmentation},
-  author={Your Name and Coauthors},
-  year={2025},
-  ...
-}
 
 
 
