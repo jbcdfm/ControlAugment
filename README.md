@@ -18,8 +18,8 @@ Key ideas:
 - The method balances optimization and regularization automatically
 
 
-<img src="figures/ControlAugment_sketch.png" alt="Ctrl-A Overview" width="800"/>
-
+<img src="figures/ControlAugment_sketch.png" alt="Ctrl-A Overview" width="700"/>
+*Figure 1: Illustration of the Ctrl-A setup.*
 
 ---
 
@@ -74,6 +74,7 @@ python control_augment/train_model_cli.py --config config_cifar10_modified --epo
 ## Reference repos
 This work and repository were largely inspired by the [TrivialAugment](https://github.com/automl/trivialaugment) project.
 The data augmentation operations are implemented using PyTorch’s `torchvision` package.
+
 
 
 
