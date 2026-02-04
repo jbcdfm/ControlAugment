@@ -62,6 +62,16 @@ python control_augment/train_model_cli.py --config config_cifar10_modified --epo
 ```
 
 
+## Citation
+
+
+
+
+## Reference repos
+This work and repository were largely inspired by [TrivialAugment](https://github.com/automl/trivialaugment) project.
+The data augmentation operations are implemented using PyTorch’s `torchvision` package.
+
+
 
 
 
