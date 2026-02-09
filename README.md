@@ -32,7 +32,7 @@ cd ControlAugment
 ```
 
 ```bash
-# Create a descriptive virtual environment
+# Create virtual environment
 python -m venv ctrla_env
 
 # Activate the environment
@@ -81,6 +81,7 @@ This work and repository were largely inspired by the [TrivialAugment](https://g
 The data augmentation operations are implemented using PyTorch’s `torchvision` package.
 
 ---
+
 
 
 
