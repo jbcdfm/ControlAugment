@@ -1,11 +1,8 @@
-# import math
-# from enum import Enum
 from typing import Dict, List, Optional, Tuple
 import torch
 from torch import Tensor
 from torchvision.transforms import functional as F, InterpolationMode
 import random
-import numpy as np
 from PIL import Image
 
 
@@ -13,12 +10,6 @@ def _apply_op(
     img: Tensor, op_name: str, magnitude: float, interpolation: InterpolationMode, fill: Optional[List[float]]
 ):
     if op_name == "ShearX":
-        # magnitude should be arctan(magnitude)
-        # official autoaug: (1, level, 0, 0, 1, 0)
-        # https://github.com/tensorflow/models/blob/dd02069717128186b88afa8d857ce57d17957f03/research/autoaugment/augmentation_transforms.py#L290
-        # compared to
-        # torchvision:      (1, tan(level), 0, 0, 1, 0)
-        # https://github.com/pytorch/vision/blob/0c2373d0bba3499e95776e7936e207d8a1676e65/torchvision/transforms/functional.py#L976
         img = F.affine(
             img,
             angle=0.0,
@@ -30,8 +21,6 @@ def _apply_op(
             center=[0, 0],
         )
     elif op_name == "ShearY":
-        # magnitude should be arctan(magnitude)
-        # See above
         img = F.affine(
             img,
             angle=0.0,
@@ -87,9 +76,7 @@ def _apply_op(
         img = Image.blend(img,F.autocontrast(img),magnitude) #F.autocontrast(img)
     elif op_name == "Equalize":
         img = Image.blend(img,F.equalize(img),magnitude) #F.equalize(img)
-    # elif op_name == "CutOut":
-    #     img = CutOutPIL(mask_size = int(magnitude*img.size[0]/2))(img)
-    
+
         
     elif op_name == "Identity":
         pass
@@ -101,18 +88,20 @@ def _apply_op(
      
 
 class SingleAugment(torch.nn.Module):
-    r"""Change this text: Dataset-independent data-augmentation with TrivialAugment Wide, as described in
-    `"TrivialAugment: Tuning-free Yet State-of-the-Art Data Augmentation" <https://arxiv.org/abs/2103.10158>`_.
+    r"""Performs a single data transform depending on operation index and magnitude.    
+    This class is used to create the ControlAugment validation dataset. 
+    
     If the image is torch Tensor, it should be of type torch.uint8, and it is expected
     to have [..., 1 or 3, H, W] shape, where ... means an arbitrary number of leading dimensions.
     If img is PIL Image, it is expected to be in mode "L" or "RGB".
+    Partly adapted from the torchvision.transforms.TrivialAugmentWide module.
+
 
     Args:
-        num_magnitude_bins (int): The number of different magnitude values.
-        gamma (float): The augmentation magnitudes of the N augmentation policies. Each value
+        gamma (float): The augmentation magnitudes of the K augmentation policies. Each element
             is a value between 0 and 1. 
         interpolation (InterpolationMode): Desired interpolation enum defined by
-            :class:`torchvision.transforms.InterpolationMode`. Default is ``InterpolationMode.NEAREST``.
+            :class:`torchvision.transforms.InterpolationMode`. Default is set to ``InterpolationMode.BILINEAR``.
             If input is Tensor, only ``InterpolationMode.NEAREST``, ``InterpolationMode.BILINEAR`` are supported.
         fill (sequence or number, optional): Pixel fill value for the area outside the transformed
             image. If given a number, the value is used for all bands respectively.
@@ -168,7 +157,6 @@ class SingleAugment(torch.nn.Module):
                 fill = [float(f) for f in fill]
 
         op_meta = self._augmentation_space()
-        # op_index = int(torch.randint(len(op_meta), (1,)).item())
         op_name = list(op_meta.keys())[op_index]
         magnitude, signed = op_meta[op_name]
         
@@ -193,18 +181,27 @@ class SingleAugment(torch.nn.Module):
 
 
 class ControlAugment(torch.nn.Module):
-    r"""Dataset-independent data-augmentation with InformedAugment.
+    r"""Data augmentation pipeline in the ControlAugment implementation based on
+    adaotabke data augmentation strength distributions. The class receives three inputs: 
+        - the number of operations to be sampled in each image instance,
+        - the maximum augmentation strength of each transformation type (Gamma)
+        - the augmentation-strength distribution skewness for each transformation type (alpha)
+
     If the image is torch Tensor, it should be of type torch.uint8, and it is expected
     to have [..., 1 or 3, H, W] shape, where ... means an arbitrary number of leading dimensions.
     If img is PIL Image, it is expected to be in mode "L" or "RGB".
+    Partly adapted from the torchvision.transforms.TrivialAugmentWide module.
+
+
 
     Args:
-        Naugs_geo (int): Number of geometric transforms to be sampled.
-        Naugs_app (int): Number of appearance-based transforms to be sampled.
-        gamma (float): The maximum augmentation magnitudes of the N operations. Each value
+        Naugs (int): Number of transforms to be sampled.
+        gamma (float): The maximum augmentation magnitudes of the K operations. Each element
             is a value between 0 and 1. 
+        skew (float): The degree of distribution skew of the K operations. Each element
+            is a value between 0 and 1.
         interpolation (InterpolationMode): Desired interpolation enum defined by
-            :class:`torchvision.transforms.InterpolationMode`. Default is ``InterpolationMode.NEAREST``.
+            :class:`torchvision.transforms.InterpolationMode`. Default is ``InterpolationMode.BILINEAR``.
             If input is Tensor, only ``InterpolationMode.NEAREST``, ``InterpolationMode.BILINEAR`` are supported.
         fill (sequence or number, optional): Pixel fill value for the area outside the transformed
             image. If given a number, the value is used for all bands respectively.

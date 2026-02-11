@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Nov  3 08:30:44 2025
-
-@author: jespe
-"""
-
 import math
 from typing import Optional
 import torch
@@ -107,11 +100,12 @@ def _apply_op(
 
 
 class TrivialAugment(torch.nn.Module):
-    r"""Dataset-independent data-augmentation with TrivialAugment Wide, as described in
+    r"""Dataset-independent data-augmentation with TrivialAugment, as described in
     `"TrivialAugment: Tuning-free Yet State-of-the-Art Data Augmentation" <https://arxiv.org/abs/2103.10158>`_.
     If the image is torch Tensor, it should be of type torch.uint8, and it is expected
     to have [..., 1 or 3, H, W] shape, where ... means an arbitrary number of leading dimensions.
     If img is PIL Image, it is expected to be in mode "L" or "RGB".
+    Partly adapted from the torchvision.transforms.TrivialAugmentWide module.
 
     Args:
         num_magnitude_bins (int): The number of different magnitude values.

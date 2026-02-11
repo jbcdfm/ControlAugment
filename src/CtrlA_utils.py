@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Jan 26 09:47:26 2026
-
-@author: JBC
-"""
-
 import numpy as np
 import torch
 from torch.utils.data import Dataset

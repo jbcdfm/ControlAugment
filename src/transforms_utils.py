@@ -125,7 +125,7 @@ def aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std):
 def duplicate_and_flip(train_data):
     """
     Args:
-        tuple: (image, label): image is type torch, and has shape (N, 3, 32, 32)
+        tuple: (image, label): image is type torch, and has shape (N, 3, 32, 32) (CIFAR)
     Returns:
         tuple: (image, label) image has shape (2N, 3, 32, 32)
         as every image is horisontally mirrored and stored alongside

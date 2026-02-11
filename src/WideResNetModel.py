@@ -1,12 +1,8 @@
-
-
 import torch
 import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F
 from torch.autograd import Variable
-
-import sys
 import numpy as np
 
 def conv3x3(in_planes, out_planes, stride=1):
