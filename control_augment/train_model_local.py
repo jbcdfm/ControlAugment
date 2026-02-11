@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon _an 20 
-
-@author: JBC
-"""
-
 import torch
 import torch.nn as nn
 import torch.utils.data
@@ -22,7 +15,7 @@ from datetime import datetime
 import sys
 from pathlib import Path
 # Add project root to path
-project_root = Path(__file__).resolve().parents[1]  # adjust if nested more
+project_root = Path(__file__).resolve().parents[1]  
 sys.path.append(str(project_root))
 from src import setup_utils as su
 from src import CtrlA_utils as ctrla_utils
@@ -162,6 +155,15 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
         Delta_xi_min = 0.005
         Delta_xi_max = 0.1
     
+    
+    elif DAtype == 'TA':
+        if params["aug_space"] == "Standard":
+            transform_vec = list(aug.TrivialAugment()._augmentation_space_standard(1,(2,2)).keys())
+        elif params["aug_space"] == "Wide": 
+            transform_vec = list(aug.TrivialAugment()._augmentation_space_wide(1).keys())
+        elif params["aug_space"] == "Control": 
+            transform_vec = list(aug.TrivialAugment()._augmentation_space_control(1).keys())
+    
     # After the creation of the Ctrl-A dataset, convert to dataset object:
     val_data =  su.MyDataset(val_data)   
     
@@ -180,7 +182,7 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
 
     if DAtype == "TA":
         DataAugTransform = aug.TrivialAugment(aug_space=params["aug_space"],interpolation=interp)
-        train_transform = su.aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std)
+        train_transform = aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std)
 
         train_data.transform = train_transform   # Update training data transformations
         train_loader = DataLoader(
@@ -203,10 +205,14 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     kappa = []
     phases = [0]
     
-        
-    # Initial ASD parameters 
-    Gamma = [0.]*len(transform_vec) 
-    alpha =  [0.]*len(transform_vec)
+    if DAtype == "CtrlA":    
+        # Initial ASD parameters 
+        Gamma = [0.]*len(transform_vec) 
+        alpha =  [0.]*len(transform_vec)
+    if DAtype == "TA":
+        Gamma = [1.]*(len(transform_vec)-1) # minus identity operator
+        alpha =  [0.]*(len(transform_vec)-1) 
+    
     
 
     i = 1  # epoch index stepper
@@ -244,10 +250,7 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
             # Train Model
             lr = lr_schedule[i-1]
             optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=wd,nesterov=True)
-            
-            # CtrlA ASD parameter saving
-            arg_strengths.append(Gamma)
-            alpha_strengths.append(alpha)
+                      
             
             # Train Model
             trn_correct, trn_loss = train_model(train_loader,optimizer,model,criterion,device)
@@ -263,8 +266,13 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
             current_time = time.time()
             print(f"Epoch {i} | {(current_time-start_time)/60:.2f} min | Train loss: {trn_loss/len(train_data)*batch_sz*1000:.2f}m  |  Val. loss: {vl_loss/len(val_data)*batch_sz*1000:.2f}m")
              
-            # Here starts the IA procedure
-            if DAtype == 'CtrlA':
+            # ASD parameter saving
+            arg_strengths.append(Gamma)
+            alpha_strengths.append(alpha)
+            
+            # Here starts the CtrlA procedure
+            if DAtype == 'CtrlA':  
+            
             
                 if i%phase_length == 0 and i<epoch_max:
                     phase_flag = False
@@ -352,9 +360,12 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
  
     # Reset
     gc.collect()
-    del train_loader, val_loader, CtrlA_loader
+    del train_loader, val_loader
     del model, optimizer
-    del CtrlA_dataset, train_data, val_data, test_data
+    del train_data, val_data, test_data
+    if DAtype == "CtrlA":
+        del  CtrlA_loader, CtrlA_dataset
+
 
     torch.cuda.synchronize()
     torch.cuda.empty_cache()
@@ -372,10 +383,10 @@ def main():
     model_name = 'WideResNet-28-10'  # 'airbench94', 'WideResNet-28-10', "LeNet"
     setup = "modified" # "modified" # "standard"
     n_epochs = 500
-    lr_schedule_type = "cos"
-    aug_space = "Wide" 
+    lr_schedule_type = "cos" #"cos", "erf"
+    aug_space = "Control"    # "Standard", "Wide", "Control"
     validation_set = "test_subset"  # "test_subset", "train_subset"
-    phase_length = 5 # phase length
+    phase_length = 5 
     
     
     if dataset == "cifar10":
@@ -403,8 +414,8 @@ def main():
     if not os.path.isdir(data_folder):
         os.makedirs(data_folder)
     
-    CtrlA = True
-    TA = False   
+    CtrlA = False
+    TA = True   
     assert CtrlA != TA, "Can't have both"
     
     loginfo = {"Filename": __file__,  "Model type": model_name,
@@ -427,7 +438,7 @@ def main():
     if TA:
         DAtype = "TA"
         kappa_sp = 0
-        N = 0
+        N = 1
         log_name = str(model_name)+'_'+str(dataset)+f'_TA_{setup}-setup_{aug_space}-pool.txt'
         loginfo.update({"Augmentation method": "TA"})
 
@@ -454,20 +465,20 @@ def main():
 
     n_runs = 5
     for j in range(n_runs):
-        
-        
+        print("-"*25)
+        print(f"Starting run {j+1} out of {n_runs}")
+        print("-"*25)
         acc, acc_TTA, acc_val, Gamma, alpha, kappa, lr = setup_and_train(N_augs= N,
                                                            params = dict_train, 
                                                            model_type = model_name, 
                                                            dataset = dataset, 
                                                            val_type = validation_set, 
                                                            DAtype = DAtype) # Run model training instance
+        print(acc,acc_TTA,acc_val[-1])
         Final_correct.append(acc)
         Final_correct_TTA.append(acc_TTA)
         Final_correct_val.append(acc_val[-1])
         
-    
-        print(acc,acc_TTA,acc_val[-1])
         log_run_result(folder_and_file,j,acc_val,acc,acc_TTA,kappa,lr,Gamma, alpha, phase_length)
         
     log_summary(folder_and_file,Final_correct,Final_correct_TTA,Final_correct_val)

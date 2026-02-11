@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon _an 20 
-
-@author: JBC
-"""
-
 import torch
 import torch.nn as nn
 import torch.utils.data
@@ -159,6 +152,14 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
         kappa_sp = params["kappa_sp"]            
         Delta_xi_min = 0.005
         Delta_xi_max = 0.1
+        
+    elif DAtype == 'TA':
+        if params["aug_space"] == "Standard":
+            transform_vec = list(aug.TrivialAugment()._augmentation_space_standard(1,(2,2)).keys())
+        elif params["aug_space"] == "Wide": 
+            transform_vec = list(aug.TrivialAugment()._augmentation_space_wide(1).keys())
+        elif params["aug_space"] == "Control": 
+            transform_vec = list(aug.TrivialAugment()._augmentation_space_control(1).keys())
     
     # After the creation of the Ctrl-A dataset, convert to dataset object:
     val_data =  su.MyDataset(val_data)   
@@ -202,9 +203,13 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     phases = [0]
     
         
-    # Initial ASD parameters 
-    Gamma = [0.]*len(transform_vec) 
-    alpha =  [0.]*len(transform_vec)
+    if DAtype == "CtrlA":    
+        # Initial ASD parameters 
+        Gamma = [0.]*len(transform_vec) 
+        alpha =  [0.]*len(transform_vec)
+    if DAtype == "TA":
+        Gamma = [1.]*(len(transform_vec)-1) # minus identity operator
+        alpha =  [0.]*(len(transform_vec)-1) 
     
 
     i = 1  # epoch index stepper
@@ -243,10 +248,7 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
             lr = lr_schedule[i-1]
             optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=wd,nesterov=True)
             
-            # CtrlA ASD parameter saving
-            arg_strengths.append(Gamma)
-            alpha_strengths.append(alpha)
-            
+
             # Train Model
             trn_correct, trn_loss = train_model(train_loader,optimizer,model,criterion,device)
             train_losses.append(trn_loss)
@@ -261,7 +263,13 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
             current_time = time.time()
             print(f"Epoch {i} | {(current_time-start_time)/60:.2f} min | Train loss: {trn_loss/len(train_data)*batch_sz*1000:.2f}m  |  Val. loss: {vl_loss/len(val_data)*batch_sz*1000:.2f}m")
              
-            # Here starts the IA procedure
+            
+            
+            # CtrlA ASD parameter saving
+            arg_strengths.append(Gamma)
+            alpha_strengths.append(alpha)
+            
+            # Here starts the CtrlA procedure
             if DAtype == 'CtrlA':
             
                 if i%phase_length == 0 and i<epoch_max:
@@ -346,11 +354,15 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     test_acc, test_acc_TTA = test_model_tta(test_data, model, criterion, TTA_transforms, batch_sz, number_classes, device)
     
     
+ 
     # Reset
     gc.collect()
-    del train_loader, val_loader, CtrlA_loader
+    del train_loader, val_loader
     del model, optimizer
-    del CtrlA_dataset, train_data, val_data, test_data
+    del train_data, val_data, test_data
+    if DAtype == "CtrlA":
+        del  CtrlA_loader, CtrlA_dataset
+
     torch.cuda.synchronize()
     torch.cuda.empty_cache()
     
