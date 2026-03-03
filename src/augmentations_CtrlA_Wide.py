@@ -182,7 +182,7 @@ class SingleAugment(torch.nn.Module):
 
 class ControlAugment(torch.nn.Module):
     r"""Data augmentation pipeline in the ControlAugment implementation based on
-    adaotabke data augmentation strength distributions. The class receives three inputs: 
+    adaptable data augmentation strength distributions. The class receives three inputs: 
         - the number of operations to be sampled in each image instance,
         - the maximum augmentation strength of each transformation type (Gamma)
         - the augmentation-strength distribution skewness for each transformation type (alpha)
@@ -222,7 +222,7 @@ class ControlAugment(torch.nn.Module):
         self.interpolation = interpolation
         self.fill = fill
 
-    def _augmentation_space(self) -> Dict[str, Tuple[Tensor, bool]]:
+    def _augmentation_space(self) -> Dict[str, bool]:
         return {
             # op_name: (signed)
             "TranslateX": (True),
@@ -243,10 +243,10 @@ class ControlAugment(torch.nn.Module):
 
     def forward(self, img: Tensor) -> Tensor:
         """
-            img (PIL Image or Tensor): Image to be transformed.
+            img (PIL Image): Image to be transformed.
 
         Returns:
-            PIL Image or Tensor: Transformed image.
+            PIL Image: Transformed image.
         """
         fill = self.fill  
         gamma = self.gamma
