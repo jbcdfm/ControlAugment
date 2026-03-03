@@ -242,6 +242,13 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
             print(train_transform)
             start_time = time.time()
             print("Initiating training...")
+            
+            
+        test_run = False
+        if test_run == True:
+            DAtype = "Test"
+            print("This is a test run without CtrlA updates.")
+        
         
         print(f"Phase {j} | Learning rate: {lr_schedule[i-1]:.6f}")
         ############ Here Starts Phase j ###########
@@ -379,14 +386,14 @@ def main():
     
     date = datetime.today().strftime('%Y-%m-%d')
     data_folder = os.path.join(os.getcwd(), "Datafolder", date)
-    dataset = 'cifar100' # 'cifar10' # 'svhn-c' # 'cifar100'
+    dataset = 'cifar10' # 'cifar10' # 'svhn-c' # 'cifar100'
     model_name = 'WideResNet-28-10'  # 'airbench94', 'WideResNet-28-10', "LeNet"
     setup = "modified" # "modified" # "standard"
     n_epochs = 500
     lr_schedule_type = "cos" #"cos", "erf"
     aug_space = "Control"    # "Standard", "Wide", "Control"
     validation_set = "test_subset"  # "test_subset", "train_subset"
-    phase_length = 5 
+    phase_length = 5
     
     
     if dataset == "cifar10":
@@ -414,8 +421,8 @@ def main():
     if not os.path.isdir(data_folder):
         os.makedirs(data_folder)
     
-    CtrlA = False
-    TA = True   
+    CtrlA = True
+    TA = False  
     assert CtrlA != TA, "Can't have both"
     
     loginfo = {"Filename": __file__,  "Model type": model_name,
@@ -424,7 +431,7 @@ def main():
     
     if CtrlA:
         DAtype = 'CtrlA'
-        N = 2
+        N=2 
         if N == 1:
             kappa_sp = 1.0
         elif N == 2:
