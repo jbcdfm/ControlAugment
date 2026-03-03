@@ -1,6 +1,6 @@
 # ControlAugment (Ctrl-A)
 
-This repository contains the official implementation of **Ctrl-A**, a control-driven, online data augmentation framework proposed in the paper:
+This repository contains the official implementation of Ctrl-A, a control-driven, online data augmentation framework proposed in the paper:
 
 > **Ctrl-A: Control-Driven Online Data Augmentation**
 
@@ -10,10 +10,10 @@ Ctrl-A dynamically adapts data augmentation strength during training using feedb
 
 ## Overview
 
-Data augmentation is a key regularization technique in deep learning, yet most approaches rely on fixed or predefined policies. Ctrl-A introduces a **closed-loop control mechanism** that adjusts augmentation parameters online based on training feedback.
+Data augmentation is a key regularization technique in deep learning, yet most approaches rely on fixed or predefined policies. Ctrl-A introduces a closed-loop control mechanism that adjusts augmentation parameters online based on training feedback.
 
 Key ideas:
-- Augmentation strengths are individually **adapted during training**
+- Augmentation strengths are individually adapted during training
 - Control signals are derived from training dynamics (e.g., loss behavior)
 - The method balances optimization and regularization automatically
 
@@ -81,6 +81,7 @@ This work and repository were partly inspired by the simplicity of the [TrivialA
 The data augmentation operations are implemented using PyTorch’s `torchvision` package.
 
 ---
+
 
 
 
