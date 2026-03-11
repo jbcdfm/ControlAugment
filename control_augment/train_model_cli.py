@@ -406,7 +406,7 @@ def main():
            "lr_schedule_type": args.learning_rate_type,
            "wd": args.weight_decay,
            "nmax": args.epochs,
-           "phase_length": arg.phase_length,
+           "phase_length": args.phase_length,
            "setup": args.setup,
            "aug_space": args.aug_space
            }
@@ -425,5 +425,6 @@ if __name__ == "__main__":
     main()
 
  
+
 
 
