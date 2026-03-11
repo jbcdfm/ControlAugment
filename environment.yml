@@ -6,7 +6,7 @@ channels:
   - defaults
 dependencies:
   # Python version
-  - python=3.12
+  - python=3.12.8
 
   # GPU-enabled PyTorch stack
   - pytorch==2.5.1
@@ -17,5 +17,5 @@ dependencies:
   # Other pinned dependencies
   - numpy==2.1
   - matplotlib==3.10
-  - pyyaml==6.0
+  - pyyaml==6.0.2
   - tqdm==4.65
