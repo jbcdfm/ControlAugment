@@ -272,11 +272,11 @@ class ControlAugment(torch.nn.Module):
         for n in range(len(index)):
             op_name = list(op_meta.keys())[index[n]]
             signed = op_meta[op_name]
-            if skew[n] == 0:
+            if skew[index[n]] == 0:
                 magnitude = random.uniform(0,  gamma[index[n]])
             else:
                 x = random.uniform(-gamma[index[n]],gamma[index[n]])
-                if random.uniform(-gamma[index[n]],gamma[index[n]]) > skew[n]*x:
+                if random.uniform(-gamma[index[n]],gamma[index[n]]) > skew[index[n]]*x:
                     x = -x
                 magnitude = x/2 + gamma[index[n]]/2
             
