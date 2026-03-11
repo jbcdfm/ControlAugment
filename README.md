@@ -32,19 +32,11 @@ cd ControlAugment
 ```
 
 ```bash
-# Create virtual environment
-python -m venv ctrla_env
+# Create environment using yml file:
+conda env create -f environment.yml
 
 # Activate the environment
-# Linux / Mac:
-# source ctrla_env/bin/activate
-# Windows:
-ctrla_env\Scripts\activate
-```
-
-```bash
-# Install required dependencies
-pip install -r requirements.txt
+conda activate ctrla_env
 ```
 
 ---
@@ -81,6 +73,7 @@ This work and repository were partly inspired by the simplicity of the [TrivialA
 The data augmentation operations are implemented using PyTorch’s `torchvision` package.
 
 ---
+
 
 
 
