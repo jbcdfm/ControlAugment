@@ -18,7 +18,7 @@ Key ideas:
 - The method balances optimization and regularization automatically
 
 
-<img src="figures/ControlAugment_sketch.png" alt="Ctrl-A Overview" width="700"/>
+<img src="figures/CtrlA_principle.png" alt="Ctrl-A Overview" width="700"/>
 *Figure 1: Illustration of the Ctrl-A setup.*
 
 ---
@@ -73,6 +73,7 @@ This work and repository were partly inspired by the simplicity of the [TrivialA
 The data augmentation operations are implemented using PyTorch’s `torchvision` package.
 
 ---
+
 
 
 
