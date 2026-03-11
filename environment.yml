@@ -1,0 +1,21 @@
+name: ctrla_env
+channels:
+  - nvidia
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  # Python version
+  - python=3.12
+
+  # GPU-enabled PyTorch stack
+  - pytorch==2.5.1
+  - torchvision==0.20.1
+  - torchaudio==2.5.1
+  - pytorch-cuda=12.1
+
+  # Other pinned dependencies
+  - numpy==2.1
+  - matplotlib==3.10
+  - pyyaml==6.0
+  - tqdm==4.65
