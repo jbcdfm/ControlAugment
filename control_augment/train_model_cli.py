@@ -416,10 +416,10 @@ def main():
 
     dict_train = {"kappa_sp": args.kappa_sp,
            "lr": args.learning_rate,
-           "lr_schedule_type": args.lr_schedule_type,
+           "lr_schedule_type": args.learning_rate_type,
            "wd": args.weight_decay,
            "nmax": args.epochs,
-           "n_p": args.phase_length,
+           "phase_length": args.phase_length,
            "setup": args.setup,
            "aug_space": args.aug_space
            }
