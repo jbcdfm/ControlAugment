@@ -401,7 +401,7 @@ def main():
     parser.add_argument("--epochs", type=int, default=cfg.EPOCHS)
     parser.add_argument("--batch_size", type=int, default=cfg.BATCH_SIZE)
     parser.add_argument("--learning_rate", type=float, default=cfg.LEARNING_RATE)
-    parser.add_argument("--learning_rate_type", type=int, default=cfg.LEARNING_RATE_TYPE)
+    parser.add_argument("--learning_rate_type", type=str, default=cfg.LEARNING_RATE_TYPE)
     parser.add_argument("--weight_decay", type=float, default=cfg.WEIGHT_DECAY)
     parser.add_argument("--model_name", type=str, default=cfg.MODEL_NAME)
     parser.add_argument("--da_type", type=str, default=cfg.DA_TYPE)
@@ -436,4 +436,5 @@ if __name__ == "__main__":
     import multiprocessing
     multiprocessing.set_start_method("spawn", force=True)
     main()
+
  
