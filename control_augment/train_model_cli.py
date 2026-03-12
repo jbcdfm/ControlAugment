@@ -25,7 +25,7 @@ from src.engine import train_model, test_model, test_model_tta, CtrlA_test_model
 
 
 
-# Main Training Loop
+# Main Code
 def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'WideResNet-28-10', val_type = "test_subset", DAtype = 'CtrlA'):
     
 
@@ -37,12 +37,14 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     assert params["setup"] in ["standard", "modified"], f"Invalid value: {params['setup']}"
     assert params["lr_schedule_type"] in ["cos", "erf"], f"Invalid value: {params['lr_schedule_type']}"
 
+   
     if DAtype == 'CtrlA':
         assert type(N_augs) == int, "N_augs must be an integer for CtrlA"
         N = int(N_augs)
         assert N > 0, "N must be positive or 0" 
-        print(f"CtrlA-augmentation: {N_augs}")
-        aug = importlib.import_module(f"src.augmentations_CtrlA_{params['aug_space']}")
+        print(f"CtrlA({N_augs})")
+        aug = importlib.import_module(f"src.augmentations_CtrlA_{params['aug_space']}")   # import based on aug_space
+        
     elif DAtype == 'TA':
         aug = importlib.import_module("src.augmentations_TA")
 
@@ -80,12 +82,12 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
             train_data = su.Create_train_Dataset(new_train_data,new_train_labels) 
             train_data = su.MyDataset(train_data)
             print("Training dataset updated with mirrored versions")
-            epoch_max = epoch_max//2
+            epoch_max = epoch_max//2   # divide epoch_max by 2 due to additions of mirror data
         else:
-            train_data =  su.MyDataset(train_data)
+            train_data = su.MyDataset(train_data)
 
     else:
-        train_data =  su.MyDataset(train_data)
+        train_data = su.MyDataset(train_data)
     
     # Create Dataset instance for test data
     test_data =  su.MyDataset(test_data)  
@@ -113,11 +115,10 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
         lr_schedule = 1/2*lr0*(1+np.cos(np.pi*np.linspace(0,epoch_max,epoch_max+1)/(epoch_max+1)))
     elif lr_schedule_type == "erf":   # only used with the airbench94 model to create results in Fig. 4.
         lr_schedule = ctrla_utils.erf_fit(np.linspace(0,epoch_max,epoch_max+1),epoch_max/2,lr0/2,lr0/2,epoch_max/4)
-        
-    
+
     # Loss criteria
     criterion = nn.CrossEntropyLoss()
-    batch_sz = 125  
+    batch_sz = 125
     
     if setup == "modified": # modified setup uses BILINEAR interpolation
         interp = InterpolationMode.BILINEAR
@@ -152,7 +153,8 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
         kappa_sp = params["kappa_sp"]            
         Delta_xi_min = 0.005
         Delta_xi_max = 0.1
-        
+    
+    
     elif DAtype == 'TA':
         if params["aug_space"] == "Standard":
             transform_vec = list(aug.TrivialAugment()._augmentation_space_standard(1,(2,2)).keys())
@@ -202,7 +204,6 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     kappa = []
     phases = [0]
     
-        
     if DAtype == "CtrlA":    
         # Initial ASD parameters 
         Gamma = [0.]*len(transform_vec) 
@@ -210,6 +211,7 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     if DAtype == "TA":
         Gamma = [1.]*(len(transform_vec)-1) # minus identity operator
         alpha =  [0.]*(len(transform_vec)-1) 
+    
     
 
     i = 1  # epoch index stepper
@@ -239,6 +241,13 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
             print(train_transform)
             start_time = time.time()
             print("Initiating training...")
+            
+            
+        test_run = False
+        if test_run == True:
+            DAtype = "Test"
+            print("This is a test run without CtrlA updates.")
+        
         
         print(f"Phase {j} | Learning rate: {lr_schedule[i-1]:.6f}")
         ############ Here Starts Phase j ###########
@@ -247,8 +256,8 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
             # Train Model
             lr = lr_schedule[i-1]
             optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=wd,nesterov=True)
+                      
             
-
             # Train Model
             trn_correct, trn_loss = train_model(train_loader,optimizer,model,criterion,device)
             train_losses.append(trn_loss)
@@ -263,14 +272,13 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
             current_time = time.time()
             print(f"Epoch {i} | {(current_time-start_time)/60:.2f} min | Train loss: {trn_loss/len(train_data)*batch_sz*1000:.2f}m  |  Val. loss: {vl_loss/len(val_data)*batch_sz*1000:.2f}m")
              
-            
-            
-            # CtrlA ASD parameter saving
+            # ASD parameter saving
             arg_strengths.append(Gamma)
             alpha_strengths.append(alpha)
             
             # Here starts the CtrlA procedure
-            if DAtype == 'CtrlA':
+            if DAtype == 'CtrlA':  
+            
             
                 if i%phase_length == 0 and i<epoch_max:
                     phase_flag = False
@@ -297,7 +305,7 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
                         elif xi > 0.99:   # Set upper limit of xi
                             xi = 0.99
 
-                        print(f"New threshold value, xi: {xi:.3f}, based on kappa_{j}: {kappa[-1]:.2f}")
+                        print(f"New threshold value, xi: {xi:.3f}, kappa_{j}: {kappa[-1]:.2f}")
 
 
                     benchmark = np.asarray(val_correct[::-1][0])/len(val_data)
@@ -338,8 +346,9 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     total = current_time - start_time
     print(f"Training took {total/60} minutes")    
     val_acc = np.asarray(val_correct)/len(val_data)*100
-    print(f"Final validation accuracy of {val_acc[::-1][0]} %")
+    print(f"Final validation accuracy of {val_acc[::-1][0]:.2f} %")
 
+    
 
     if "cifar" in dataset:
         TTA_transforms = [transforms.Compose([transforms.Normalize(data_mean, data_std)]),
@@ -354,6 +363,9 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     test_acc, test_acc_TTA = test_model_tta(test_data, model, criterion, TTA_transforms, batch_sz, number_classes, device)
     
     
+    print(f"Final test accuracy of {test_acc/len(test_data)*100:.2f} %")
+    print(f"Final test accuracy (with TTA) of {test_acc_TTA/len(test_data)*100:.2f} %")
+
  
     # Reset
     gc.collect()
@@ -362,6 +374,7 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     del train_data, val_data, test_data
     if DAtype == "CtrlA":
         del  CtrlA_loader, CtrlA_dataset
+
 
     torch.cuda.synchronize()
     torch.cuda.empty_cache()
@@ -388,7 +401,7 @@ def main():
     parser.add_argument("--epochs", type=int, default=cfg.EPOCHS)
     parser.add_argument("--batch_size", type=int, default=cfg.BATCH_SIZE)
     parser.add_argument("--learning_rate", type=float, default=cfg.LEARNING_RATE)
-    parser.add_argument("--learning_rate_type", type=str, default=cfg.LEARNING_RATE_TYPE)
+    parser.add_argument("--learning_rate_type", type=int, default=cfg.LEARNING_RATE_TYPE)
     parser.add_argument("--weight_decay", type=float, default=cfg.WEIGHT_DECAY)
     parser.add_argument("--model_name", type=str, default=cfg.MODEL_NAME)
     parser.add_argument("--da_type", type=str, default=cfg.DA_TYPE)
@@ -403,10 +416,10 @@ def main():
 
     dict_train = {"kappa_sp": args.kappa_sp,
            "lr": args.learning_rate,
-           "lr_schedule_type": args.learning_rate_type,
+           "lr_schedule_type": args.lr_schedule_type,
            "wd": args.weight_decay,
            "nmax": args.epochs,
-           "phase_length": args.phase_length,
+           "n_p": args.phase_length,
            "setup": args.setup,
            "aug_space": args.aug_space
            }
@@ -423,8 +436,4 @@ if __name__ == "__main__":
     import multiprocessing
     multiprocessing.set_start_method("spawn", force=True)
     main()
-
  
-
-
-
