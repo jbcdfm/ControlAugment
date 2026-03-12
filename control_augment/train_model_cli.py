@@ -363,8 +363,8 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     test_acc, test_acc_TTA = test_model_tta(test_data, model, criterion, TTA_transforms, batch_sz, number_classes, device)
     
     
-    print(f"Final test accuracy of {test_acc/len(test_data)*100:.2f} %")
-    print(f"Final test accuracy (with TTA) of {test_acc_TTA/len(test_data)*100:.2f} %")
+    print(f"Final test accuracy of {test_acc:.2f} %")
+    print(f"Final test accuracy (with TTA) of {test_acc_TTA:.2f} %")
 
  
     # Reset
@@ -436,5 +436,4 @@ if __name__ == "__main__":
     import multiprocessing
     multiprocessing.set_start_method("spawn", force=True)
     main()
-
  
