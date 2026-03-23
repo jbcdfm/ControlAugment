@@ -4,7 +4,7 @@ This repository contains the official implementation of Ctrl-A, a control-driven
 
 > **Ctrl-A: Control-Driven Online Data Augmentation**
 
-Ctrl-A dynamically adapts data augmentation strength during training using feedback from training dynamics, enabling improved generalization compared to static or heuristic augmentation strategies.
+By Incorporating aspects from control theory, Ctrl-A dynamically adapts data augmentation strength during training using feedback from training dynamics.
 
 ---
 
@@ -13,10 +13,9 @@ Ctrl-A dynamically adapts data augmentation strength during training using feedb
 Data augmentation is a key regularization technique in deep learning, yet most approaches rely on fixed or predefined policies. Ctrl-A introduces a closed-loop control mechanism that adjusts augmentation parameters online based on training feedback.
 
 Key ideas:
-- Augmentation strengths are individually adapted during training
-- Control signals are derived from training dynamics (e.g., loss behavior)
-- The method balances optimization and regularization automatically
-
+- The relative operation response (ROR) is used to determine relevant augmentation strength for each individual operation.
+- A control feedback signal is derived from training dynamics (training loss versus validation loss behavior)
+- The strength of data augmentation is actively adjusted as training progresses to prevent model overfitting.
 
 <img src="figures/CtrlA_principle.png" alt="Ctrl-A Overview" width="700"/>
 *Figure 1: Illustration of the Ctrl-A setup.*
