@@ -4,7 +4,7 @@ This repository contains the official implementation of Ctrl-A, a control-driven
 
 > **Ctrl-A: Control-Driven Online Data Augmentation**
 
-By Incorporating aspects from control theory, Ctrl-A dynamically adapts data augmentation strength during training using feedback from training dynamics.
+By incorporating aspects from control theory, Ctrl-A dynamically adapts data augmentation strength during training using feedback from training dynamics.
 
 ---
 
