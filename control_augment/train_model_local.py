@@ -386,10 +386,10 @@ def main():
     
     date = datetime.today().strftime('%Y-%m-%d')
     data_folder = os.path.join(os.getcwd(), "Datafolder", date)
-    dataset = 'svhn-c' # 'cifar10' # 'svhn-c' # 'cifar100'
+    dataset = 'cifar10' # 'cifar10' # 'svhn-c' # 'cifar100'
     model_name = 'WideResNet-28-10'  # 'airbench94', 'WideResNet-28-10', "LeNet"
     setup = "modified" # "modified" # "standard"
-    n_epochs = 300
+    n_epochs = 500
     lr_schedule_type = "cos" #"cos", "erf"
     aug_space = "Control"    # "Standard", "Wide", "Control"
     validation_set = "test_subset"  # "test_subset", "train_subset"
