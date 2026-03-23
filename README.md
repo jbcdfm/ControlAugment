@@ -10,7 +10,7 @@ By Incorporating aspects from control theory, Ctrl-A dynamically adapts data aug
 
 ## Overview
 
-Data augmentation is a key regularization technique in deep learning, yet most approaches rely on fixed or predefined policies. Ctrl-A introduces a closed-loop control mechanism that adjusts augmentation parameters online based on training feedback.
+Data augmentation is a key regularization technique in deep learning, yet most approaches rely on fixed or predefined policies. Ctrl-A introduces a closed-loop control mechanism that adjusts augmentation parameters online based on training feedback (see Figure 1).
 
 Key ideas:
 - The relative operation response (ROR) is used to determine relevant augmentation strength for each individual operation.
