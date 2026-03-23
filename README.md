@@ -74,10 +74,14 @@ The data augmentation operations are implemented using PyTorch’s `torchvision`
 ---
 
 
+## Contact
+
+For bug reports, questions, or suggestions, please contact:
+
+jbc@dfm.dk
 
 
-
-
+---
 
 
 
