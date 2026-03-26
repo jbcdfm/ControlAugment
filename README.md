@@ -78,7 +78,7 @@ To reference **Ctrl-A: Control-Driven Online Data Augmentation** ([arXiv:2603.21
   primaryClass = {cs.CV},
   url          = {https://arxiv.org/abs/2603.21819}
 }
-
+```
 
 ---
 
