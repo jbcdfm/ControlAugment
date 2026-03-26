@@ -71,7 +71,7 @@ To reference **Ctrl-A: Control-Driven Online Data Augmentation** ([arXiv:2603.21
 ```bibtex
 @misc{christensen2026ctrlA,
   title        = {Ctrl-A: Control-Driven Online Data Augmentation},
-  author       = {J. B. Christensen},
+  author       = {J. B. Christensen, C. Bench, S. A. Thomas, H. Aslan, D. Balslev-Harder, N. A. S. Smith, A. Manzin},
   year         = {2026},
   eprint       = {2603.21819},
   archivePrefix= {arXiv},
