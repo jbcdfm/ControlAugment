@@ -62,7 +62,22 @@ python control_augment/train_model_cli.py --config config_cifar10_modified --epo
 ---
 
 ## Citation
+To reference **Ctrl-A: Control-Driven Online Data Augmentation** ([arXiv:2603.21819](https://arxiv.org/abs/2603.21819)), please use:
 
+**Christensen, J. B., et al. (2026). Ctrl-A: Control-Driven Online Data Augmentation. arXiv:2603.21819.**  
+[https://arxiv.org/abs/2603.21819](https://arxiv.org/abs/2603.21819)
+
+**BibTeX:**
+```bibtex
+@misc{christensen2026ctrlA,
+  title        = {Ctrl-A: Control-Driven Online Data Augmentation},
+  author       = {J. B. Christensen},
+  year         = {2026},
+  eprint       = {2603.21819},
+  archivePrefix= {arXiv},
+  primaryClass = {cs.CV},
+  url          = {https://arxiv.org/abs/2603.21819}
+}
 
 
 ---
