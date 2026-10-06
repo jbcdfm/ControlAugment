@@ -11,6 +11,6 @@ N_AUGS = 2
 KAPPA_SP = 1.5
 PHASE_LENGTH = 5
 SETUP = "modified"
-VAL_SET = "test_subset"
+VAL_SET = "train_subset"
 AUG_SPACE = "Control"
 CUTOUT = 0
