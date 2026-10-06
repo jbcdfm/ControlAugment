@@ -23,8 +23,9 @@ def log_file_initiate(filename: str, title: str = "Log File", loginfo: dict = No
         
         log_file.write("\n")  # Add a blank line for readability
     
-def log_run_result(folder_and_file: str, run, acc_val, acc_test, acc_test_TTA, kappa, lr, Gamma, alpha, N_p):
+def log_run_result(folder_and_file: str, run, acc_val, acc_test, acc_test_TTA, kappa, xi, lr, Gamma, alpha, N_p):
     epochs = [1 + x for x in range(len(acc_val))]
+    
     # Append data to log file
     with open(folder_and_file, "a") as log_file:
         log_file.write("----------------------------------------------------------\n")
@@ -33,7 +34,7 @@ def log_run_result(folder_and_file: str, run, acc_val, acc_test, acc_test_TTA, k
         for e in epochs:
             if e%N_p==0:
                 log_file.write(f"Epoch {e}: ")
-                log_file.write(f"Classification val. accuracy: {acc_val[e-1]:.3f} % | kappa = {kappa[int((e-N_p)/N_p)]:.3f} | Learning rate: {lr[e-1]:.6f}\n")
+                log_file.write(f"Classification val. accuracy: {acc_val[e-1]:.3f} % | kappa = {kappa[int((e-N_p)/N_p)]:.3f} | xi = {xi[int((e-N_p)/N_p)]:.3f} | Learning rate: {lr[e-1]:.6f}\n")
                 log_file.write("Gamma = ")
                 for gam in Gamma[e-1]:
                     log_file.write(f"{gam:.3f}, ")

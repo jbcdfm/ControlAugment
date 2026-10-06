@@ -79,7 +79,12 @@ def load_dataset(dataset):
     if dataset == 'svhn-c':
         train_data = datasets.SVHN("/Data/SVHN/raw", split="train", download=True,transform=transforms.ToTensor())
         test_data = datasets.SVHN("/Data/SVHN/raw", split="test", download=True,transform=transforms.ToTensor())
-        number_classes = len(np.unique(train_data.labels))        
+        number_classes = len(np.unique(train_data.labels))    
+        
+    if dataset == 'tiny-imagenet':
+        train_data = datasets.ImageFolder("O:/Data/TinyImageNet/tiny-imagenet-200/train",transform=transforms.ToTensor())
+        test_data = datasets.ImageFolder("O:/Data/TinyImageNet/tiny-imagenet-200/val",transform=transforms.ToTensor())
+        number_classes = 200
 
     return train_data, test_data, number_classes
 
@@ -94,6 +99,10 @@ def setup_model(model_type,device,number_classes):
     if model_type == 'WideResNet-28-10':
         model = WRN.Wide_ResNet(28,10,dropout_rate=0, num_classes=number_classes).to(device)
         model.apply(WRN.conv_init)
+    if model_type == 'resnet18':
+         model = model_lib.resnet18(num_classes=number_classes).to(device)
+    if model_type == 'resnet50':
+        model = model_lib.resnet50(num_classes=number_classes).to(device)
 
     return model
 

@@ -54,7 +54,7 @@ class CutOut:
 
 
 
-def aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std):
+def aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std,cutout_size=16):
     
 
     if dataset == 'cifar10':
@@ -74,7 +74,7 @@ def aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std):
                 DataAugTransform,
                 transforms.ToTensor(),
                 transforms.Normalize(data_mean, data_std),
-                CutOut(16),
+                CutOut(cutout_size),
             ])
             
     if dataset == 'cifar100':
@@ -85,7 +85,7 @@ def aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std):
                 DataAugTransform,
                 transforms.ToTensor(),
                 transforms.Normalize(data_mean, data_std),
-                CutOut(16),
+                CutOut(cutout_size),
             ])
         else: #else use standard pipelline
             train_transform = transforms.Compose([
@@ -95,7 +95,7 @@ def aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std):
                 DataAugTransform,
                 transforms.ToTensor(),
                 transforms.Normalize(data_mean, data_std),
-                CutOut(16),
+                CutOut(cutout_size),
             ])
             
     if dataset == 'svhn-c':
@@ -114,8 +114,21 @@ def aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std):
                 DataAugTransform,
                 transforms.ToTensor(),
                 transforms.Normalize(data_mean, data_std),
-                CutOut(16),
+                CutOut(cutout_size),
             ])
+    
+    if dataset == 'tiny-imagenet':
+    
+        train_transform = transforms.Compose([
+                transforms.RandomHorizontalFlip(0.5),
+                transforms.RandomCrop(64,padding=8,padding_mode='edge'),
+                transforms.ToPILImage(),
+                DataAugTransform,
+                transforms.ToTensor(),
+                transforms.Normalize(data_mean, data_std),
+                CutOut(cutout_size),
+            ])
+
  
     
     return train_transform
@@ -125,13 +138,19 @@ def aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std):
 def duplicate_and_flip(train_data):
     """
     Args:
-        tuple: (image, label): image is type torch, and has shape (N, 3, 32, 32) (CIFAR)
+        tuple: (image, label): image is type torch, and has shape (N, C, H, W) (CIFAR)
     Returns:
-        tuple: (image, label) image has shape (2N, 3, 32, 32)
+        tuple: (image, label) image has shape (2N, C, H, W)
         as every image is horisontally mirrored and stored alongside
         the originals.
     """
-    train_data_duplicated = torch.zeros([len(train_data)*2, 3, 32, 32])
+    
+    
+    C, H, W = train_data[0][0].shape
+
+
+    
+    train_data_duplicated = torch.zeros([len(train_data)*2, C, H, W])
     train_labels_duplicated = torch.zeros([len(train_data)*2,])
     for n in range(len(train_data)*2):
         # if n < len(train_data):
