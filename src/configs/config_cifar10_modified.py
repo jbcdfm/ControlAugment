@@ -13,3 +13,4 @@ PHASE_LENGTH = 5
 SETUP = "modified"
 VAL_SET = "test_subset"
 AUG_SPACE = "Control"
+CUTOUT = 0
