@@ -25,17 +25,17 @@ from src.engine import train_model, test_model, test_model_tta, CtrlA_test_model
 
 
 
-# Main Code
-def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'WideResNet-28-10', val_type = "test_subset", DAtype = 'CtrlA'):
+# Main code
+def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'WideResNet-28-10', val_type = "train_subset", DAtype = 'CtrlA'):
     
 
     # ASSERTIONS
     assert params['aug_space'] in ["Standard", "Wide", "Control"], f"Invalid value: {params['aug_space']}"
-    assert dataset in ["cifar10", "cifar100", "svhn-c"], f"Invalid value: {dataset}"
-    assert val_type in ["test_subset", "train_subset"], f"Invalid value: {val_type}"
-    assert DAtype in ["CtrlA", "TA"], f"Invalid value: {DAtype}"
+    assert dataset in ["cifar10", "cifar100", "svhn-c",'tiny-imagenet'], f"Invalid value: {dataset}"
+    assert val_type in ["train_subset"], f"Invalid value: {val_type}"
+    assert DAtype in ["CtrlA", "TA", "RA"], f"Invalid value: {DAtype}"
     assert params["setup"] in ["standard", "modified"], f"Invalid value: {params['setup']}"
-    assert params["lr_schedule_type"] in ["cos", "erf"], f"Invalid value: {params['lr_schedule_type']}"
+    assert params["lr_schedule_type"] in ["cos"], f"Invalid value: {params['lr_schedule_type']}"
 
    
     if DAtype == 'CtrlA':
@@ -45,7 +45,7 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
         print(f"CtrlA({N_augs})")
         aug = importlib.import_module(f"src.augmentations_CtrlA_{params['aug_space']}")   # import based on aug_space
         
-    elif DAtype == 'TA':
+    elif DAtype == 'TA' or DAtype == "RA":
         aug = importlib.import_module("src.augmentations_TA")
 
 
@@ -58,7 +58,9 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     
     # Model
     model = su.setup_model(model_type,device,number_classes)
-
+    
+  
+    
     
     val_size = 1000
     # Create splits (with a fixed seed for repeatability)
@@ -66,10 +68,10 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
         generator = torch.Generator().manual_seed(1)
         train_data, val_data = random_split(
             train_data, [len(train_data)-val_size, val_size], generator=generator)
-    elif val_type == "test_subset":
-        val_data = Subset(test_data, list(range(val_size)))
+
 
     
+
     
     setup = params["setup"]
     epoch_max = params["nmax"]
@@ -77,7 +79,7 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
 
     # Create Dataset instance for training data
     if setup == "modified":
-        if dataset == 'cifar10' or dataset == 'cifar100':
+        if dataset == 'cifar10':
             new_train_data, new_train_labels = duplicate_and_flip(train_data)
             train_data = su.Create_train_Dataset(new_train_data,new_train_labels) 
             train_data = su.MyDataset(train_data)
@@ -92,29 +94,29 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     # Create Dataset instance for test data
     test_data =  su.MyDataset(test_data)  
     
-    # Calculate training data per-channel mean and standard deviation
-    data_mean, data_std = su.get_mean_and_std(train_data)
-    if setup == "modified" and "svhn" in dataset:
-        data_mean = (0.5,0.5,0.5)
-    print("Data mean:", data_mean)
-    print("Data std: ", data_std)
-        
     
+    # Calculate training data per-channel mean and standard deviation
+    if dataset == "tiny-imagenet": #using imagenet statistics
+        data_mean = (0.485, 0.456, 0.406)
+        data_std  = (0.229, 0.224, 0.225)
+    else:
+        data_mean, data_std = su.get_mean_and_std(train_data)
+
+      
     val_transform = transforms.Compose([
         transforms.Normalize(data_mean, data_std),
     ])
 
 
 
-           
+        
     # Define learning parameters
     lr0 = params["lr"]
     wd = params["wd"]
     lr_schedule_type = params["lr_schedule_type"]
     if lr_schedule_type == "cos":
         lr_schedule = 1/2*lr0*(1+np.cos(np.pi*np.linspace(0,epoch_max,epoch_max+1)/(epoch_max+1)))
-    elif lr_schedule_type == "erf":   # only used with the airbench94 model to create results in Fig. 4.
-        lr_schedule = ctrla_utils.erf_fit(np.linspace(0,epoch_max,epoch_max+1),epoch_max/2,lr0/2,lr0/2,epoch_max/4)
+   
 
     # Loss criteria
     criterion = nn.CrossEntropyLoss()
@@ -150,12 +152,13 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
 
         # Initiate Ctrl-A parameters
         xi = 0.9# 
-        kappa_sp = params["kappa_sp"]            
+        kappa_sp = params["kappa_sp"]      
+        gain = params["gain"]
         Delta_xi_min = 0.005
         Delta_xi_max = 0.1
     
     
-    elif DAtype == 'TA':
+    elif DAtype == 'TA' or DAtype == "RA":
         if params["aug_space"] == "Standard":
             transform_vec = list(aug.TrivialAugment()._augmentation_space_standard(1,(2,2)).keys())
         elif params["aug_space"] == "Wide": 
@@ -165,8 +168,6 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     
     # After the creation of the Ctrl-A dataset, convert to dataset object:
     val_data =  su.MyDataset(val_data)   
-    
-
     val_data.transform = val_transform    # Test data transformation
     val_loader = DataLoader(
         val_data,
@@ -179,11 +180,15 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
        
 
 
-    if DAtype == "TA":
-        DataAugTransform = aug.TrivialAugment(aug_space=params["aug_space"],interpolation=interp)
-        train_transform = aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std)
+    if DAtype == "TA" or DAtype == "RA":
+        if DAtype == "TA":
+            DataAugTransform = aug.TrivialAugment(aug_space=params["aug_space"],interpolation=interp)
+        else:
+            M = params["M"]
+            DataAugTransform = aug.RandAugment(num_ops=N_augs,magnitude=M,aug_space=params["aug_space"],interpolation=interp)
+        train_transform = aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std, params["cutout_size"])
 
-        train_data.transform = train_transform   # Update training data transformations
+        train_data.transform = train_transform 
         train_loader = DataLoader(
             train_data, 
             batch_size = batch_sz, 
@@ -193,6 +198,8 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
             num_workers=6,
             persistent_workers=True,
             )
+
+
     
     # Lists updated during training
     train_losses = []
@@ -208,9 +215,15 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
         # Initial ASD parameters 
         Gamma = [0.]*len(transform_vec) 
         alpha =  [0.]*len(transform_vec)
+        xi_list = [xi]
     if DAtype == "TA":
         Gamma = [1.]*(len(transform_vec)-1) # minus identity operator
         alpha =  [0.]*(len(transform_vec)-1) 
+        xi_list = [0]
+    if DAtype == "RA":
+        Gamma = [M/30]*(len(transform_vec)-1)
+        alpha =  [0.]*(len(transform_vec)-1) 
+        xi_list = [0]
     
     
 
@@ -223,7 +236,7 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
 
         if DAtype == "CtrlA":    # Rerun this every phase to update Gamma and alpha
             DataAugTransform = aug.ControlAugment(gamma = Gamma, skew = alpha, Naugs = N,interpolation=interp)
-            train_transform = aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std)
+            train_transform = aug_pipeline(DataAugTransform, dataset, setup, data_mean, data_std, params["cutout_size"])
             
             train_data.transform = train_transform   # Update training data transformations
             train_loader = DataLoader(
@@ -240,7 +253,7 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
             print("Transform pipeline:")
             print(train_transform)
             start_time = time.time()
-            print("Initiating training...")
+            print(f"Initiating training... epoch {i} of {epoch_max}")
             
             
         test_run = False
@@ -253,16 +266,14 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
         ############ Here Starts Phase j ###########
         phase_flag = True; 
         while phase_flag:
-            # Train Model
             lr = lr_schedule[i-1]
             optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=wd,nesterov=True)
-                      
-            
+
             # Train Model
             trn_correct, trn_loss = train_model(train_loader,optimizer,model,criterion,device)
             train_losses.append(trn_loss)
             train_correct.append(trn_correct)
-                
+                            
             # Evaluate Model
             vl_correct,vl_loss = test_model(val_loader,model,criterion,device)
             val_losses.append(vl_loss)
@@ -293,21 +304,23 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
                     
                     if j > 1:
                         # Update xi based on Equations (6)
-                        Delta_xi = (1-xi)/2*(kappa[-1]-kappa_sp)
+                        Delta_xi = gain*(1-xi)*(kappa[-1]-kappa_sp)
                         if abs(Delta_xi)<Delta_xi_min:
                             Delta_xi =Delta_xi_min*np.sign(Delta_xi)
                         elif abs(Delta_xi)>Delta_xi_max:
                             Delta_xi = Delta_xi_max*np.sign(Delta_xi)
 
                         xi += Delta_xi
-                        if xi < 0:        # Set lower limit of xi
-                            xi = 0
+                        if xi < 0.5:      # Set lower limit of xi
+                            xi = 0.5
                         elif xi > 0.99:   # Set upper limit of xi
                             xi = 0.99
-
+                        
+                    
+                        
                         print(f"New threshold value, xi: {xi:.3f}, kappa_{j}: {kappa[-1]:.2f}")
 
-
+                    xi_list.append(xi)
                     benchmark = np.asarray(val_correct[::-1][0])/len(val_data)
                     print(f"Train Acc.:  {train_correct[-1]/len(train_data)*100:.2f} %, Val. Acc.: {benchmark*100:.2f} %")
                     
@@ -328,6 +341,7 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
                 train_loss_avg = np.mean(np.asarray(train_losses[phases[j-1]:phases[j]]))/len(train_data)
                 val_loss_avg =  np.mean(np.asarray(val_losses[phases[j-1]:phases[j]]))/len(val_data)
                 kappa.append(train_loss_avg/val_loss_avg)
+                xi_list.append(0)
                 j+=1
 
 
@@ -339,6 +353,7 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
                 train_loss_avg = np.mean(np.asarray(train_losses[phases[j-1]:phases[j]]))/len(train_data)
                 val_loss_avg =  np.mean(np.asarray(val_losses[phases[j-1]:phases[j]]))/len(val_data)
                 kappa.append(train_loss_avg/val_loss_avg)
+
             i+=1    
     
     print(f"Training ended after phase {j}" )
@@ -346,11 +361,11 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     total = current_time - start_time
     print(f"Training took {total/60} minutes")    
     val_acc = np.asarray(val_correct)/len(val_data)*100
-    print(f"Final validation accuracy of {val_acc[::-1][0]:.2f} %")
+    print(f"Final validation accuracy of {val_acc[::-1][0]} %")
 
     
 
-    if "cifar" in dataset:
+    if "cifar" in dataset or "imagenet" in dataset:
         TTA_transforms = [transforms.Compose([transforms.Normalize(data_mean, data_std)]),
                       transforms.v2.Compose([transforms.RandomHorizontalFlip(p=1),transforms.Normalize(data_mean, data_std)]),
                       ]
@@ -363,9 +378,6 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     test_acc, test_acc_TTA = test_model_tta(test_data, model, criterion, TTA_transforms, batch_sz, number_classes, device)
     
     
-    print(f"Final test accuracy of {test_acc:.2f} %")
-    print(f"Final test accuracy (with TTA) of {test_acc_TTA:.2f} %")
-
  
     # Reset
     gc.collect()
@@ -379,7 +391,8 @@ def setup_and_train(N_augs=2, params = {}, dataset = 'cifar10', model_type = 'Wi
     torch.cuda.synchronize()
     torch.cuda.empty_cache()
     
-    return test_acc, test_acc_TTA, val_acc, arg_strengths, alpha_strengths, kappa, lr_schedule
+    return test_acc, test_acc_TTA, val_acc, arg_strengths, alpha_strengths, kappa, xi_list, lr_schedule
+
 
 
 
@@ -411,6 +424,8 @@ def main():
     parser.add_argument("--setup", type=str, default=cfg.SETUP)
     parser.add_argument("--validation_set", type=str, default=cfg.VAL_SET)
     parser.add_argument("--aug_space", type=str, default=cfg.AUG_SPACE)
+    parser.add_argument("--cutout", type=str, default=cfg.CUTOUT)
+
     
     args = parser.parse_args()
 
@@ -421,7 +436,8 @@ def main():
            "nmax": args.epochs,
            "phase_length": args.phase_length,
            "setup": args.setup,
-           "aug_space": args.aug_space
+           "aug_space": args.aug_space,
+           "cutout_size": args.cutout
            }
 
     acc, acc_TTA, acc_val, gamma, alpha, kappa, lr = setup_and_train(N_augs=args.N,
